@@ -1,6 +1,8 @@
 
 # Python Virtual Environment
 venv-topics-cord19/
+# CORD-19 Dataset
+cord19_data/
 
 # MacOS File System
 .DS_Store
