@@ -3,6 +3,8 @@
 venv-topics-cord19/
 # CORD-19 Dataset
 cord19_data/
+# Project Data
+project_data/
 
 # MacOS File System
 .DS_Store
