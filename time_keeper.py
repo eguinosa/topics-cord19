@@ -65,8 +65,9 @@ class TimeKeeper:
         """
         Transforms the elapsed time from the start of the program to a new format
         in hours, minutes and seconds.
-        :return: A string containing the elapsed time in <hours:minutes:seconds>
-        """        
+
+        Returns: A string containing the elapsed time in <hours:minutes:seconds>
+        """
         # Get the runtime at the current moment:
         current_runtime = self.total_runtime()
 
