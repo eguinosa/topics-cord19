@@ -7,8 +7,10 @@ def progress_bar(progress, total):
     """
     Print on the console a bar representing the progress of the function that
     called this method.
-    :progress: How many actions the program has already covered.
-    :total: The total amount of actions the program need to do.
+
+    Args:
+        progress: How many of the planned actions the program has done.
+        total: The total amount of actions the program needs to do.
     """
     # Values to print.
     steps = progress * 40 // total
@@ -27,6 +29,12 @@ def progress_bar(progress, total):
 def big_number(number):
     """
     Add commas to number with more than 3 digits, so they are more easily read.
+
+    Args:
+        number: The number we want to transform to string
+
+    Returns:
+        The string of the number with the format: dd,ddd,ddd,ddd
     """
     # Get the string of the number.
     number_string = str(number)
