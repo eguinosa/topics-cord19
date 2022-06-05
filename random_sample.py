@@ -16,11 +16,13 @@ class RandomSample:
     # Class Data Locations
     data_folder = 'project_data'
     sample_index_file = 'random_sample_index.json'
+    sample_index_prefix = 'random_sample_index_'
 
-    def __init__(self, paper_type='all', size=-1, show_progress=False, _used_saved=False):
+    def __init__(self, paper_type='all', size=-1, use_saved=False,
+                 sample_id=None, show_progress=False):
         """
-        Create an instance of PapersAnalyzer() to get the papers' content and
-        attributes from it.
+        Create a Random Sample of documents from the CORD-19 dataset, or load a
+        previously created Random Sample.
 
         Args:
             show_progress: Bool representing whether we show the progress of
@@ -28,20 +30,29 @@ class RandomSample:
             size: An int with size of the sample. The default value '-1'
                 represents all the papers available with the specified paper
                 type.
+            use_saved: A Bool indicating if we are loading the sample from a
+                file. (Private Class Variable)
+            sample_id: The ID of the sample we want to load. It can be used when
+                we previously saved a sample with an ID, to avoid loading the
+                last used sample.
             show_progress: A Bool representing whether we show the progress of
                 the function or not.
-            _used_saved: A Bool indicating if we are loading the sample from a
-                file. (Private Class Variable)
         """
         # Get the analyzed CORD-19 papers. (Creates data folder)
         self.analyzed_papers = PapersAnalyzer(show_progress=show_progress)
         # Also save the unorganized Papers().
         self.cord19_papers = self.analyzed_papers.cord19_papers
 
-        # Use saved Random Sample.
-        if _used_saved:
+        # Use a saved Random Sample.
+        if use_saved:
             # Check if the sample index is locally available.
-            self.sample_index_path = join(self.data_folder, self.sample_index_file)
+            if sample_id:
+                # Load a specific Sample, previously saved with an ID.
+                saved_sample_file = self.sample_index_prefix + sample_id + '.json'
+                self.sample_index_path = join(self.data_folder, saved_sample_file)
+            else:
+                # Load last used Sample.
+                self.sample_index_path = join(self.data_folder, self.sample_index_file)
             if not isfile(self.sample_index_path):
                 raise FileNotFoundError("No local RandomSample index file available.")
             # Load Sample Index.
@@ -134,8 +145,24 @@ class RandomSample:
         for cord_uid in self.sample_index:
             yield self.cord19_papers.paper_embedding(cord_uid)
 
+    def save_sample(self, sample_id):
+        """
+        Saves the current Random Sample in a separated index file, to avoid
+        overwriting the index when we use a different Sample. The saved Sample
+        can be loaded later providing the 'sample_id'.
+
+        Args:
+            sample_id: A string or number as the Sample ID.
+        """
+        # Create Random Sample path.
+        sample_index_file = self.sample_index_prefix + sample_id + '.json'
+        sample_index_path = join(self.data_folder, sample_index_file)
+        # Save Sample Index in file.
+        with open(sample_index_path, 'w') as f:
+            json.dump(self.sample_index, f)
+
     @classmethod
-    def sample_saved(cls):
+    def sample_saved(cls, sample_id=None):
         """
         Check if we can load a previously saved Random Sample, searching for the
         sample index in the project data folder.
@@ -143,20 +170,12 @@ class RandomSample:
         Returns: A bool representing if we can load the sample or not.
         """
         # Check if the sample index file exists.
-        sample_index_path = join(cls.data_folder, cls.sample_index_file)
+        if sample_id:
+            # Check sample previously saved with an ID.
+            saved_sample_file = cls.sample_index_prefix + sample_id + '.json'
+            sample_index_path = join(cls.data_folder, saved_sample_file)
+        else:
+            # Check last used Sample.
+            sample_index_path = join(cls.data_folder, cls.sample_index_file)
         result = isdir(cls.data_folder) & isfile(sample_index_path)
         return result
-
-    @classmethod
-    def load_sample(cls, show_progress=False):
-        """
-        Load Random Sample from a saved sample index file.
-
-        Args:
-            show_progress: A Bool representing whether we show the progress of
-                the function or not.
-        Returns:
-            A RandomSample() with the papers in the index file.
-        """
-        random_sample = cls(_used_saved=True, show_progress=show_progress)
-        return random_sample
