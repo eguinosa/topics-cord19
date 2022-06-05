@@ -404,7 +404,9 @@ class Papers:
 
     def selected_papers_title_abstract(self, cord_uids):
         """
-        Create an iterator with the texts of the requested 'cord_uids' papers.
+        Create an iterator with the title and abstracts of the requested
+        'cord_uids' papers.
+
         Args:
             cord_uids: A list of strings with the identifiers of the papers.
 
@@ -449,7 +451,7 @@ class Papers:
             cord_uids: A list of strings with the identifiers of the papers.
 
         Returns:
-            An iterator of strings.
+            An iterator with the Specter vectors of the documents.
         """
         for cord_uid in cord_uids:
             yield self.paper_embedding(cord_uid)
