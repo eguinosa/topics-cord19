@@ -402,6 +402,58 @@ class Papers:
         for cord_uid in self.papers_index:
             yield self.paper_embedding(cord_uid)
 
+    def selected_papers_title_abstract(self, cord_uids):
+        """
+        Create an iterator with the texts of the requested 'cord_uids' papers.
+        Args:
+            cord_uids: A list of strings with the identifiers of the papers.
+
+        Returns:
+            An iterator of strings.
+        """
+        for cord_uid in cord_uids:
+            yield self.paper_title_abstract(cord_uid)
+
+    def selected_papers_content(self, cord_uids):
+        """
+        Create an iterator containing the body text of the papers requested in
+        'cord_uids'.
+        Args:
+            cord_uids: A list of strings with the identifiers of the papers.
+
+        Returns:
+            An iterator of strings.
+        """
+        for cord_uid in cord_uids:
+            yield self.paper_content(cord_uid)
+
+    def selected_papers_full_text(self, cord_uids):
+        """
+        Create and iterator containing the full text of the papers requested in
+        'cord_uids'.
+
+        Args:
+            cord_uids: A list of strings with the identifiers of the papers.
+
+        Returns:
+            An iterator of strings.
+        """
+        for cord_uid in cord_uids:
+            yield self.paper_full_text(cord_uid)
+
+    def selected_papers_embedding(self, cord_uids):
+        """
+        Create and iterator with the embeddings of all the papers requested in
+        'cord_uids'.
+        Args:
+            cord_uids: A list of strings with the identifiers of the papers.
+
+        Returns:
+            An iterator of strings.
+        """
+        for cord_uid in cord_uids:
+            yield self.paper_embedding(cord_uid)
+
 
 # Testing the Papers class
 if __name__ == '__main__':
