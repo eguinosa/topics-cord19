@@ -26,13 +26,13 @@ class RandomSample:
         previously created Random Sample.
 
         Args:
-            show_progress: Bool representing whether we show the progress of
-                the function or not.
+            paper_type: The type of Papers we want to use for the Sample (small,
+                medium or big).
             sample_size: An int with size of the sample. The default value '-1'
                 represents all the papers available with the specified paper
                 type.
             use_saved: A Bool indicating if we are loading the sample from a
-                file. (Private Class Variable)
+                file.
             sample_id: The ID of the sample we want to load. It can be used when
                 we previously saved a sample with an ID, to avoid loading the
                 last used sample.
@@ -110,7 +110,7 @@ class RandomSample:
         random_sample = random.sample(papers, total)
         return random_sample
 
-    def sample_titles_abstracts(self):
+    def docs_titles_abstracts(self):
         """
         Create an iterator with the titles and abstracts of the sample's papers.
 
@@ -119,7 +119,7 @@ class RandomSample:
         for cord_uid in self.sample_index:
             yield self.cord19_papers.paper_title_abstract(cord_uid)
 
-    def sample_contents(self):
+    def docs_contents(self):
         """
         Create an iterator containing the body text of the papers in the sample.
 
@@ -128,7 +128,7 @@ class RandomSample:
         for cord_uid in self.sample_index:
             yield self.cord19_papers.paper_content(cord_uid)
 
-    def sample_full_texts(self):
+    def docs_full_texts(self):
         """
         Create and iterator containing the full text of the papers in the sample.
 
@@ -137,7 +137,7 @@ class RandomSample:
         for cord_uid in self.sample_index:
             yield self.cord19_papers.paper_full_text(cord_uid)
 
-    def sample_embeddings(self):
+    def docs_embeddings(self):
         """
         Create and iterator with the embeddings of all the papers in the sample.
 
