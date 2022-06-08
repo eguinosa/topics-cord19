@@ -168,18 +168,57 @@ class RandomSample:
         Check if we can load a previously saved Random Sample, searching for the
         sample index in the project data folder.
 
-        Returns: A bool representing if we can load the sample or not.
+        Args:
+            sample_id: A string or number as the Sample ID.
+
+        Returns:
+            A bool representing if we can load the sample or not.
         """
         # Check if the sample index file exists.
         if sample_id:
             # Check sample previously saved with an ID.
-            saved_sample_file = cls.sample_index_prefix + sample_id + '.json'
+            saved_sample_file = cls.sample_index_prefix + str(sample_id) + '.json'
             sample_index_path = join(cls.data_folder, saved_sample_file)
         else:
             # Check last used Sample.
             sample_index_path = join(cls.data_folder, cls.sample_index_file)
         result = isdir(cls.data_folder) & isfile(sample_index_path)
         return result
+
+    @classmethod
+    def saved_sample_size(cls, sample_id=None):
+        """
+        Check the size of the 'sample_id' saved Sample. If no 'sample_id' is
+        provided, checks the size of the last sample used.
+
+        Args:
+            sample_id:  A string or number as the Sample ID.
+
+        Returns:
+            A int with the number of papers available in the saved Sample. If no
+                sample is found, then returns -1.
+        """
+        # Create Sample Path.
+        if sample_id:
+            # Check sample previously saved with an ID.
+            saved_sample_file = cls.sample_index_prefix + str(sample_id) + '.json'
+            sample_index_path = join(cls.data_folder, saved_sample_file)
+        else:
+            # Check last used Sample.
+            sample_index_path = join(cls.data_folder, cls.sample_index_file)
+
+        # Check if the Sample index exists.
+        if not isdir(cls.data_folder):
+            return -1
+        if not isfile(sample_index_path):
+            return -1
+
+        # Check the size of the index.
+        with open(sample_index_path, 'r') as f:
+            sample_index = json.load(f)
+            sample_size = len(sample_index)
+
+        return sample_size
 
 
 if __name__ == '__main__':
