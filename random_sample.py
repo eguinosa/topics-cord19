@@ -58,13 +58,13 @@ class RandomSample:
                 raise FileNotFoundError("No local RandomSample index file available.")
             # Load Sample Index.
             with open(self.sample_index_path, 'r') as f:
-                self.sample_index = json.load(f)
+                self.sample_cord_uids = json.load(f)
             if show_progress:
                 print("Loading Sample...")
                 progress_bar(1, 1)
         else:
             # Create a new Random Sample.
-            self.sample_index = self._new_random_sample(paper_type=paper_type, sample_size=sample_size)
+            self.sample_cord_uids = self._new_random_sample(paper_type=paper_type, sample_size=sample_size)
             # Progress
             if show_progress:
                 print("Creating new Random Sample...")
@@ -72,7 +72,7 @@ class RandomSample:
             # Save the new Sample Index.
             self.sample_index_path = join(self.data_folder, self.sample_index_file)
             with open(self.sample_index_path, 'w') as f:
-                json.dump(self.sample_index, f)
+                json.dump(self.sample_cord_uids, f)
 
     def _new_random_sample(self, paper_type='all', sample_size=-1):
         """
@@ -116,7 +116,7 @@ class RandomSample:
 
         Returns: An iterator of strings.
         """
-        for cord_uid in self.sample_index:
+        for cord_uid in self.sample_cord_uids:
             yield self.cord19_papers.paper_title_abstract(cord_uid)
 
     def docs_contents(self):
@@ -125,7 +125,7 @@ class RandomSample:
 
         Returns: An iterator of strings
         """
-        for cord_uid in self.sample_index:
+        for cord_uid in self.sample_cord_uids:
             yield self.cord19_papers.paper_content(cord_uid)
 
     def docs_full_texts(self):
@@ -134,7 +134,7 @@ class RandomSample:
 
         Returns: An iterator of strings.
         """
-        for cord_uid in self.sample_index:
+        for cord_uid in self.sample_cord_uids:
             yield self.cord19_papers.paper_full_text(cord_uid)
 
     def docs_embeddings(self):
@@ -143,7 +143,7 @@ class RandomSample:
 
         Returns: An iterator with the Specter vectors of the documents.
         """
-        for cord_uid in self.sample_index:
+        for cord_uid in self.sample_cord_uids:
             yield self.cord19_papers.paper_embedding(cord_uid)
 
     def save_sample(self, sample_id):
@@ -160,7 +160,7 @@ class RandomSample:
         sample_index_path = join(self.data_folder, sample_index_file)
         # Save Sample Index in file.
         with open(sample_index_path, 'w') as f:
-            json.dump(self.sample_index, f)
+            json.dump(self.sample_cord_uids, f)
 
     @classmethod
     def sample_saved(cls, sample_id=None):
@@ -234,7 +234,7 @@ if __name__ == '__main__':
 
     print("\nFirst 5 Document of the sample:")
     count = 0
-    for doc_id in sample.sample_index[:5]:
+    for doc_id in sample.sample_cord_uids[:5]:
         count += 1
         print(f"Document {count} - cord_uid: {doc_id}")
 
@@ -251,13 +251,13 @@ if __name__ == '__main__':
 
     print("\nFirst 5 Document of the New Sample:")
     count = 0
-    for doc_id in sample.sample_index[:5]:
+    for doc_id in sample.sample_cord_uids[:5]:
         count += 1
         print(f"Document {count} - cord_uid: {doc_id}")
 
     print("\nFirst 5 Document of the Old Sample:")
     count = 0
-    for doc_id in old_sample.sample_index[:5]:
+    for doc_id in old_sample.sample_cord_uids[:5]:
         count += 1
         print(f"Document {count} - cord_uid: {doc_id}")
 
