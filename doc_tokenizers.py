@@ -41,23 +41,23 @@ def doc_tokenizer(doc: str, min_len=2, max_len=15):
         doc_token = doc_token.replace('-', '_')
 
         # Substitute with <tag> Pure Numeric tokens.
-        if is_numeric(doc_token):
+        if _is_numeric(doc_token):
             final_tokens.append('<numeric>')
         # Alphanumeric tokens are accepted.
-        elif is_alpha_numeric(doc_token):
+        elif _is_alpha_numeric(doc_token):
             # Check the size of the token.
             if min_len <= len(doc_token) <= max_len:
                 final_tokens.append(doc_token)
         else:
             # Analyze all other tokens and add what the method finds.
-            new_tokens = token_analyzer(doc_token, min_len, max_len)
+            new_tokens = _token_analyzer(doc_token, min_len, max_len)
             final_tokens += new_tokens
 
     # All the tokens found.
     return final_tokens
 
 
-def token_analyzer(token_word, min_len, max_len):
+def _token_analyzer(token_word, min_len, max_len):
     """
     Analyze tokens that contain at least a non-alphanumeric character.
 
@@ -79,7 +79,7 @@ def token_analyzer(token_word, min_len, max_len):
 
         # Some other strange character found. Split the word.
         if (min_len <= len(current_token) <= max_len
-                and is_alpha_numeric(current_token)):
+                and _is_alpha_numeric(current_token)):
             # Add word to the tokens and reset.
             found_tokens.append(current_token)
             current_token = ''
@@ -92,7 +92,7 @@ def token_analyzer(token_word, min_len, max_len):
     return found_tokens
 
 
-def is_numeric(word: str):
+def _is_numeric(word: str):
     """
     Check if the given word is a number (2323, 233.11, <232,12>)
     - It can contain (.), (,), (+), (-), (*), (/), (_)
@@ -119,7 +119,7 @@ def is_numeric(word: str):
     return result
 
 
-def is_alpha_numeric(word: str):
+def _is_alpha_numeric(word: str):
     """
     Check if the word is alphanumeric: A word that starts with a letter, ends
     with a letter or number, and contains only letters, numbers, and underscore
