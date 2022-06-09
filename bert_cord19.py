@@ -147,7 +147,7 @@ class BertCord19:
         Returns:
             A list with the tensor vector of the documents.
         """
-        result = self.model.append(docs_texts)
+        result = self.model.encode(docs_texts)
         return result
 
 
