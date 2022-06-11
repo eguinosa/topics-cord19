@@ -4,6 +4,7 @@ from gensim.models import doc2vec
 from gensim.utils import simple_preprocess
 
 from random_sample import RandomSample
+from iterable_tokenizer import IterableTokenizer
 from time_keeper import TimeKeeper
 
 
@@ -37,7 +38,8 @@ class Doc2VecCord19:
                                            sample_size=corpus_size,
                                            show_progress=show_progress)
         # Tokenize the documents and Tag them.
-        train_corpus = _TaggedCorpus(self.doc2vec_corpus.docs_titles_abstracts)
+        train_corpus = IterableTokenizer(self.doc2vec_corpus.docs_full_texts)
+        # train_corpus = _TaggedCorpus(self.doc2vec_corpus.docs_titles_abstracts)
 
         # Build & Train the Model.
         self.doc2vec_model = doc2vec.Doc2Vec(vector_size=vector_size,
@@ -49,37 +51,6 @@ class Doc2VecCord19:
                                  epochs=self.doc2vec_model.epochs)
         # Get the Word2Vec model.
         self.word2vec_model = self.doc2vec_model.wv
-
-        # Save class Attributes.
-
-
-class _TaggedCorpus:
-    """
-    Iterable Class used to provide the tokenized tagged documents when training
-    the Doc2Vec model.
-    """
-    def __init__(self, docs_generator_func):
-        self.docs_generator_func = docs_generator_func
-
-    def __iter__(self):
-        return doc2vec_preprocess(self.docs_generator_func())
-
-
-def doc2vec_preprocess(docs):
-    """
-    Preprocess the corpus documents, tokenize the texts into individual words,
-    remove punctuation, set to lower case, and remove words to long or too short.
-
-    Args:
-        docs: A list of strings - The text of the documents.
-    Returns:
-        An iterator of Tagged Documents (containing processed tokens).
-    """
-    # Use the position of the docs as the Tag.
-    for tag, doc in enumerate(docs):
-        # Use the Gensim Tokenizer
-        doc_tokens = simple_preprocess(doc, deacc=True)
-        yield doc2vec.TaggedDocument(doc_tokens, [tag])
 
 
 if __name__ == '__main__':
@@ -105,7 +76,7 @@ if __name__ == '__main__':
         print(f"word #{index}/{len(doc_model.word2vec_model.index_to_key)} is {word}")
 
     test_word = 'the'
-    print(f"\nShow most similar words to {test_word}:")
+    print(f"\nShow most similar words to '{test_word}':")
     similar_words = doc_model.word2vec_model.most_similar('patient', topn=15)
     for word in similar_words:
         print(f" -> {word}")
