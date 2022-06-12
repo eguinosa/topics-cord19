@@ -73,7 +73,7 @@ class ExtractCord19:
             if show_progress:
                 print("Saving Small Papers...")
             small_ids = list(papers.small_papers)
-            small_texts = papers.cord19_papers.selected_papers_full_text(small_ids)
+            small_texts = papers.cord19_papers.selected_papers_content(small_ids)
             self.small_index = _save_papers(self.small_papers_path,
                                             small_ids,
                                             small_texts,
@@ -82,7 +82,7 @@ class ExtractCord19:
             if show_progress:
                 print("Saving Medium Papers...")
             medium_ids = list(papers.medium_papers)
-            medium_texts = papers.cord19_papers.selected_papers_full_text(medium_ids)
+            medium_texts = papers.cord19_papers.selected_papers_content(medium_ids)
             self.medium_index = _save_papers(self.medium_papers_path,
                                              medium_ids,
                                              medium_texts,
@@ -91,7 +91,7 @@ class ExtractCord19:
             if show_progress:
                 print("Saving Big Papers...")
             big_ids = list(papers.big_papers)
-            big_texts = papers.cord19_papers.selected_papers_full_text(big_ids)
+            big_texts = papers.cord19_papers.selected_papers_content(big_ids)
             self.big_index = _save_papers(self.big_papers_path,
                                           big_ids,
                                           big_texts,
