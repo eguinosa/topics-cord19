@@ -4,12 +4,13 @@ import json
 import random
 from os.path import join, isdir, isfile
 
+from corpus_cord19 import CorpusCord19
 from papers_analyzer import PapersAnalyzer
 from extra_funcs import progress_bar, big_number
 from time_keeper import TimeKeeper
 
 
-class RandomSample:
+class RandomSample(CorpusCord19):
     """
     Create and Manage a random sample of the CORD-19 papers, controlling the
     sample size and the type of papers we take (small, medium or big).
@@ -110,41 +111,50 @@ class RandomSample:
         random_sample = random.sample(papers, total)
         return random_sample
 
-    def docs_titles_abstracts(self):
+    def papers_cord_uids(self):
         """
-        Create an iterator with the titles and abstracts of the sample's papers.
+        Get the cord_uids of the papers in the Random Sample.
 
-        Returns: An iterator of strings.
+        Returns: A List[str] with the identifiers of the papers.
         """
-        for cord_uid in self.sample_cord_uids:
-            yield self.cord19_papers.paper_title_abstract(cord_uid)
+        return self.sample_cord_uids
 
-    def docs_contents(self):
+    def paper_title_abstract(self, cord_uid):
         """
-        Create an iterator containing the body text of the papers in the sample.
+        Get the title and abstract of the paper with the given 'cord_uid'.
 
-        Returns: An iterator of strings
-        """
-        for cord_uid in self.sample_cord_uids:
-            yield self.cord19_papers.paper_content(cord_uid)
+        Args:
+            cord_uid: String with the identifier of the paper.
 
-    def docs_full_texts(self):
+        Returns:
+            A string containing the title and abstract of the paper.
         """
-        Create and iterator containing the full text of the papers in the sample.
+        return self.cord19_papers.paper_title_abstract(cord_uid)
 
-        Returns: An iterator of strings.
+    def paper_body_text(self, cord_uid):
         """
-        for cord_uid in self.sample_cord_uids:
-            yield self.cord19_papers.paper_full_text(cord_uid)
+        Get text in the body of the given 'cord_uid' paper, which is the content
+        of the paper excluding the title and abstract.
 
-    def docs_embeddings(self):
-        """
-        Create and iterator with the embeddings of all the papers in the sample.
+        Args:
+            cord_uid: A string with the identifier of the paper.
 
-        Returns: An iterator with the Specter vectors of the documents.
+        Returns:
+            A string with the body text of the paper.
         """
-        for cord_uid in self.sample_cord_uids:
-            yield self.cord19_papers.paper_embedding(cord_uid)
+        return self.cord19_papers.paper_body_text(cord_uid)
+
+    def paper_embedding(self, cord_uid):
+        """
+        Get the Specter embedding of the given 'cord_uid' paper.
+
+        Args:
+            cord_uid: A string with the identifier of the paper.
+
+        Returns:
+            A List[float] containing the embedding of the paper.
+        """
+        return self.cord19_papers.paper_embedding(cord_uid)
 
     def save_sample(self, sample_id):
         """
