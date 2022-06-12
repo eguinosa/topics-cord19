@@ -8,7 +8,7 @@ class DocumentModel(ABC):
     Abstract class with the methods that the Document Models in the project
     need to implement.
     """
-    
+
     @abstractmethod
     def model_type(self):
         """
