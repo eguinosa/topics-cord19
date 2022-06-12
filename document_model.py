@@ -8,6 +8,16 @@ class DocumentModel(ABC):
     Abstract class with the methods that the Document Models in the project
     need to implement.
     """
+    
+    @abstractmethod
+    def model_type(self):
+        """
+        Get the type of the Document Model. It can be ['doc2vec', 'bert',
+        'specter', etc...].
+
+        Returns: A string with name of model the class is using.
+        """
+        pass
 
     @abstractmethod
     def word_vector(self, word):
