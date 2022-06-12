@@ -1,8 +1,7 @@
 # Gelin Eguinosa Rosique
 
 import json
-from os import mkdir
-from os.path import join, isfile, isdir
+from os.path import join, isfile
 from random import sample
 
 from papers import Papers
@@ -102,7 +101,7 @@ class PapersAnalyzer:
         # Iterate through the papers in the CORD-19 database.
         for paper_cord_uid in self.cord19_papers.papers_index:
             # Get the content of the paper.
-            paper_content = self.cord19_papers.paper_full_text(paper_cord_uid)
+            paper_content = self.cord19_papers.paper_content(paper_cord_uid)
             # Get the size of the paper.
             paper_size = len(paper_content)
 
@@ -237,7 +236,7 @@ class PapersAnalyzer:
         # Return the first 'total' papers from the given type.
         for cord_uid in papers[:total]:
             # Load the papers' content.
-            paper_content = self.cord19_papers.paper_full_text(cord_uid)
+            paper_content = self.cord19_papers.paper_content(cord_uid)
             yield paper_content
 
     def _random_papers_content(self, papers_size, n=-1):
@@ -277,46 +276,8 @@ class PapersAnalyzer:
         # Iterate through the papers and return their content.
         for cord_uid in random_papers:
             # Load the papers' content.
-            paper_content = self.cord19_papers.paper_full_text(cord_uid)
+            paper_content = self.cord19_papers.paper_content(cord_uid)
             yield paper_content
-
-
-def papers_analysis():
-    """
-    Analyze the CORD-19 papers, and classify them by the amount of characters
-    they have.
-    """
-    # Get the papers and the amount available in the current database.
-    the_papers = Papers()
-    total = len(the_papers.papers_index)
-    print(f"\nAmount of papers in CORD-19: {big_number(total)}.")
-
-    # Counters for the different size of the papers.
-    small = 0  # 0-300 characters (small paragraph)
-    medium = 0  # 301-3,000 characters (less than a page)
-    big = 0  # 3,001 - ... characters (bigger than a page)
-
-    # Iteration variables.
-    count = 0
-    # Iterate through the papers contents to see how many of each size we have.
-    print("\nAnalyzing the size of the papers...")
-    for paper_content in the_papers.all_papers_full_text():
-        # Update counter of papers viewed.
-        count += 1
-        # Print progress bar.
-        progress_bar(count, total)
-
-        # Check the size of the paper.
-        if len(paper_content) < 301:
-            small += 1
-        elif len(paper_content) < 3_001:
-            medium += 1
-        else:
-            big += 1
-    
-    print(f"\n\nPapers of one paragraph or less: {big_number(small)}.")
-    print(f"\nPapers of one page or less: {big_number(medium)}.")
-    print(f"\nPapers bigger than a page: {big_number(big)}.")
 
 
 def biggest_papers():
@@ -333,7 +294,7 @@ def biggest_papers():
     count = 0
     # Iterate through the papers contents to see how many of each size we have.
     print("\nAnalyzing the size of the papers...")
-    for paper_content in the_papers.all_papers_full_text():
+    for paper_content in the_papers.all_papers_content():
         # Update counter of papers viewed.
         count += 1
         # Print progress bar.
@@ -365,21 +326,5 @@ if __name__ == '__main__':
     print(f"The amount of Medium Papers is: {big_number(medium_count)}")
     print(f"The amount of Big Papers is: {big_number(big_count)}")
 
-    # print("\nExtracting the content of 5 Big Papers...")
-    # # Check if the testing_data folder exists.
-    # testing_folder = 'testing_data'
-    # if not isdir(testing_folder):
-    #     mkdir(testing_folder)
-    # # Extract 5 papers.
-    # paper_count = 0
-    # for paper_text in analyzer.random_big_papers(5):
-    #     # Create Paper name.
-    #     paper_count += 1
-    #     paper_file = 'extracted_paper_' + str(paper_count) + '.txt'
-    #     # Save the extracted paper.
-    #     paper_path = join(testing_folder, paper_file)
-    #     with open(paper_path, 'w') as f:
-    #         print(paper_text, file=f)
-    # # Done with extracting the 5 Big Papers.
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]\n")
