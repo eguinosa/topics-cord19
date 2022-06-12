@@ -6,14 +6,14 @@ from os import mkdir
 from os.path import join, isfile, isdir
 from collections import defaultdict
 
+from corpus_cord19 import CorpusCord19
 from extra_funcs import progress_bar
-# To test the class
-from random import randint
+from random import choice
 from time_keeper import TimeKeeper
 from extra_funcs import number_to_3digits
 
 
-class Papers:
+class Papers(CorpusCord19):
     """
     Scans the CORD-19 dataset to create an index of it, saving all the relevant
     information for later use.
@@ -258,6 +258,16 @@ class Papers:
         # Once we have saved all the embeddings, return the index.
         return embeddings_index
 
+    def papers_cord_uids(self):
+        """
+        Create a list with the 'cord_uids' of the papers in the CORD-19 dataset.
+
+        Returns: A List[str] with identifiers (cord_uids) of the papers.
+        """
+        # Take the cord_uids from the dictionary of the papers.
+        all_cord_uids = list(self.papers_index)
+        return all_cord_uids
+
     def paper_title_abstract(self, cord_uid):
         """
         Find the title and abstract of the CORD-19 paper specified by the
@@ -274,7 +284,7 @@ class Papers:
         title_abstract = paper_dict['title'] + '\n\n' + paper_dict['abstract']
         return title_abstract
 
-    def paper_content(self, cord_uid):
+    def paper_body_text(self, cord_uid):
         """
         Find the text of the 'cord_uid' paper on either the 'pmc_json_files' or
         the 'pdf_json_files'.
@@ -324,20 +334,6 @@ class Papers:
         # Return the found content.
         return body_text
 
-    def paper_full_text(self, cord_uid):
-        """
-        Get all the contents of the paper 'cord_uid', which includes the title,
-        abstract and the body text.
-
-        Args:
-            cord_uid: The Unique Identifier of the CORD-19 paper.
-
-        Returns:
-            A string containing the title, abstract and body text of the paper.
-        """
-        full_text = self.paper_title_abstract(cord_uid) + '\n\n' + self.paper_content(cord_uid)
-        return full_text
-
     def paper_embedding(self, cord_uid):
         """
         Find the precomputed SPECTER Document Embedding for the specified Paper
@@ -362,46 +358,6 @@ class Papers:
         # Return the embedding using the cached dictionary.
         return self.cached_embed_dict[cord_uid]
 
-    def all_papers_title_abstract(self):
-        """
-        Create an iterator of strings containing the title and abstract of all
-        the papers in the CORD-19 dataset.
-
-        Returns: An iterator of strings.
-        """
-        for cord_uid in self.papers_index:
-            yield self.paper_title_abstract(cord_uid)
-
-    def all_papers_content(self):
-        """
-        Create an iterator containing the body text for each of the papers in
-        the CORD-19 dataset.
-
-        Returns: An iterator of strings.
-        """
-        for cord_uid in self.papers_index:
-            yield self.paper_content(cord_uid)
-
-    def all_papers_full_text(self):
-        """
-        Create an iterator containing the full text for each of the papers in
-        the CORD-19 dataset.
-
-        Returns: An iterator of strings.
-        """
-        for cord_uid in self.papers_index:
-            yield self.paper_full_text(cord_uid)
-
-    def all_papers_embedding(self):
-        """
-        Create an iterator for the embeddings of all the papers available in the
-        CORD-19 dataset.
-
-        Returns: An iterator of embeddings (each one an array of floats).
-        """
-        for cord_uid in self.papers_index:
-            yield self.paper_embedding(cord_uid)
-
     def selected_papers_title_abstract(self, cord_uids):
         """
         Create an iterator with the title and abstracts of the requested
@@ -416,7 +372,7 @@ class Papers:
         for cord_uid in cord_uids:
             yield self.paper_title_abstract(cord_uid)
 
-    def selected_papers_content(self, cord_uids):
+    def selected_papers_body_text(self, cord_uids):
         """
         Create an iterator containing the body text of the papers requested in
         'cord_uids'.
@@ -427,9 +383,9 @@ class Papers:
             An iterator of strings.
         """
         for cord_uid in cord_uids:
-            yield self.paper_content(cord_uid)
+            yield self.paper_body_text(cord_uid)
 
-    def selected_papers_full_text(self, cord_uids):
+    def selected_papers_content(self, cord_uids):
         """
         Create and iterator containing the full text of the papers requested in
         'cord_uids'.
@@ -441,7 +397,7 @@ class Papers:
             An iterator of strings.
         """
         for cord_uid in cord_uids:
-            yield self.paper_full_text(cord_uid)
+            yield self.paper_content(cord_uid)
 
     def selected_papers_embedding(self, cord_uids):
         """
@@ -472,22 +428,21 @@ if __name__ == '__main__':
     num_papers = len(cord19_papers.papers_index)
     print(f"\nThe current CORD-19 dataset has {num_papers} documents.")
 
-    # # Get the 'cord_uid' of one of the papers.
-    # cord19_uids = list(cord19_papers.papers_index.keys())
-    # rand_i = randint(0, num_papers - 1)
-    # rand_cord_uid = cord19_uids[rand_i]
+    # Get the 'cord_uid' of one of the papers.
+    cord19_ids = cord19_papers.papers_cord_uids()
+    rand_cord_uid = choice(cord19_ids)
 
-    # # Getting the embedding of one of the papers.
-    # print(f"\nGetting the Embedding for the Paper <{rand_cord_uid}>...")
-    # result = cord19_papers.paper_embedding(rand_cord_uid)
-    # print(f"The Embedding is:")
-    # print(result)
+    # Getting the embedding of one of the papers.
+    print(f"\nGetting the Embedding for the Paper <{rand_cord_uid}>...")
+    result = cord19_papers.paper_embedding(rand_cord_uid)
+    print(f"The Embedding is:")
+    print(result)
 
-    # # Getting the title & abstract of one of the papers.
-    # print(f"\nGetting the Title & Abstract of the Paper <{rand_cord_uid}>...")
-    # result = cord19_papers.paper_title_abstract(rand_cord_uid)
-    # print("Title & Abstract:\n")
-    # print(result)
+    # Getting the title & abstract of one of the papers.
+    print(f"\nGetting the Title & Abstract of the Paper <{rand_cord_uid}>...")
+    result = cord19_papers.paper_title_abstract(rand_cord_uid)
+    print("Title & Abstract:\n")
+    print(result)
 
     # # Getting the text of one of the papers.
     # print(f"\nGetting the content of the Paper <{rand_cord_uid}>...")
