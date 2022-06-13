@@ -1,56 +1,209 @@
 # Gelin Eguinosa Rosique
 
+from os import mkdir
+from os.path import isdir, isfile, join
 from gensim.models import doc2vec
-from gensim.utils import simple_preprocess
 
+from corpus_cord19 import CorpusCord19
+from papers import Papers
 from random_sample import RandomSample
+from document_model import DocumentModel
 from iterable_tokenizer import IterableTokenizer
+from doc_tokenizers import doc_tokenizer
+from extra_funcs import big_number
 from time_keeper import TimeKeeper
 
 
-class Doc2VecCord19:
+class Doc2VecCord19(DocumentModel):
     """
     Create a Topic Model of the CORD-19 dataset using Doc2Vec.
     """
     # Class Data Locations.
     data_folder = 'project_data'
+    model_folder = 'doc2vec_cord19'
     doc2vec_model_file = 'doc2vec_cord19_model'
-    doc2vec_index = 'doc2vec_index.json'
+    doc2vec_model_prefix = 'doc2vec_cord19_model_'
+    word2vec_model_file = 'word2vec_model'
+    word2vec_model_prefix = 'word2vec_model_'
 
-    def __init__(self, vector_size=300, paper_type='all', corpus_size=-1,
-                 use_saved=False, show_progress=False):
+    def __init__(self, corpus: CorpusCord19, vector_dims=100, show_progress=False,
+                 _use_saved=False, _saved_id=None):
         """
         Create a Doc2Vec and Word2Vec model using the CORD-19 dataset.
 
         Args:
-            paper_type: The type of Papers we want to use for the Sample (small,
-                medium or big).
-            corpus_size: An int with size of the sample. The default value '-1'
-                represents all the papers available with the specified paper
-                type.
-            use_saved: A Bool indicating if we are loading the sample from a
-                file.
+            corpus: The Cord19 Corpus we are going to use to create the Doc2Vec
+                model.
+            vector_dims: The dimensions for the embeddings of the documents and
+                words in the corpus.
             show_progress: A Bool representing whether we show the progress of
                 the function or not.
+            _use_saved: A Bool indicating if we are loading the sample from a
+                file.
+            _saved_id: The ID of the model we want to load, if the model was
+                saved with an ID.
         """
-        # Load CORD-19 documents.
-        self.doc2vec_corpus = RandomSample(paper_type=paper_type,
-                                           sample_size=corpus_size,
-                                           show_progress=show_progress)
-        # Tokenize the documents and Tag them.
-        train_corpus = IterableTokenizer(self.doc2vec_corpus.docs_full_texts)
-        # train_corpus = _TaggedCorpus(self.doc2vec_corpus.docs_titles_abstracts)
+        # Create Project Folder if it doesn't exist.
+        if not isdir(self.data_folder):
+            mkdir(self.data_folder)
+        # Create Model Folder if it doesn't exist.
+        model_folder_path = join(self.data_folder, self.model_folder)
+        if not isdir(model_folder_path):
+            mkdir(model_folder_path)
 
-        # Build & Train the Model.
-        self.doc2vec_model = doc2vec.Doc2Vec(vector_size=vector_size,
-                                             min_count=2,
-                                             epochs=40)
-        self.doc2vec_model.build_vocab(train_corpus)
-        self.doc2vec_model.train(train_corpus,
-                                 total_examples=self.doc2vec_model.corpus_count,
-                                 epochs=self.doc2vec_model.epochs)
-        # Get the Word2Vec model.
-        self.word2vec_model = self.doc2vec_model.wv
+        if _use_saved:
+            # Get the Doc2Vec file we are loading.
+            if _saved_id:
+                doc2vec_model_name = self.doc2vec_model_prefix + _saved_id
+                doc2vec_model_path = join(model_folder_path, doc2vec_model_name)
+            else:
+                doc2vec_model_path = join(model_folder_path, self.doc2vec_model_file)
+            # Check the file exists.
+            if not isfile(doc2vec_model_path):
+                raise NameError("The Doc2Vec model file doesn't exist.")
+
+            # Load Model.
+            self.doc2vec_model = doc2vec.Doc2Vec.load(doc2vec_model_path)
+            self.word2vec_model = self.doc2vec_model.wv
+        else:
+            # Get the CORD-19 documents.
+            self.corpus = corpus
+
+            # Create an Iterable with the documents tagged.
+            train_corpus = IterableTokenizer(self.corpus.all_papers_content,
+                                             tagged_tokens=True)
+
+            # Create and Build the Model.
+            if show_progress:
+                print("Building Doc2Vec model...")
+            self.doc2vec_model = doc2vec.Doc2Vec(vector_size=vector_dims,
+                                                 min_count=2,
+                                                 epochs=40)
+            self.doc2vec_model.build_vocab(train_corpus)
+
+            # Train the Model.
+            if show_progress:
+                print("Training Doc2Vec model...")
+            self.doc2vec_model.train(train_corpus,
+                                     total_examples=self.doc2vec_model.corpus_count,
+                                     epochs=self.doc2vec_model.epochs)
+            # Get the Word2Vec model.
+            self.word2vec_model = self.doc2vec_model.wv
+
+            # Save Doc2Vec & Word2Vec Model.
+            doc2vec_model_path = join(model_folder_path, self.doc2vec_model_file)
+            word2vec_model_path = join(model_folder_path, self.word2vec_model_file)
+            self.doc2vec_model.save(doc2vec_model_path)
+            self.word2vec_model.save(word2vec_model_path)
+
+    def model_type(self):
+        """
+        Give the type of Document Model this class is.
+
+        Returns: A string with the name of the model the class is using.
+        """
+        return 'doc2vec'
+
+    def word_vector(self, word):
+        """
+        Transform a word into a vector.
+
+        Args:
+            word: a string of one token.
+
+        Returns:
+            The vector of the word.
+        """
+        # Use the Word2Vec Model.
+        result = self.word2vec_model[word]
+        return result
+
+    def document_vector(self, doc_text):
+        """
+        Transform the text of a document into a vector.
+
+        Args:
+            doc_text: A string containing the text of the document.
+
+        Returns:
+            The vector of the document.
+        """
+        # Tokenize the document text.
+        doc_tokens = doc_tokenizer(doc_text)
+        # Get vector using the trained Doc2Vec model.
+        doc_vector = self.doc2vec_model.infer_vector(doc_tokens)
+        return doc_vector
+
+    def save_model(self, model_id):
+        """
+        Save the Doc2Vec model in a different file with a Name ID, to use it
+        later.
+
+        Args:
+            model_id: The Identifier add to the model filename.
+        """
+        # Create files' paths.
+        model_folder_path = join(self.data_folder, self.model_folder)
+        doc2vec_model_name = self.doc2vec_model_prefix + model_id
+        word2vec_model_name = self.word2vec_model_prefix + model_id
+        doc2vec_model_path = join(model_folder_path, doc2vec_model_name)
+        word2vec_model_path = join(model_folder_path, word2vec_model_name)
+
+        # Save Doc2Vec & Word2Vec Model.
+        self.doc2vec_model.save(doc2vec_model_path)
+        self.word2vec_model.save(word2vec_model_path)
+
+    @classmethod
+    def load(cls, model_id=None, show_progress=False):
+        """
+        Load a previously created Doc2Vec model.
+        - If no 'model_id' is provided, it loads the last Doc2Vec model created.
+
+        Args:
+            model_id: A String with the ID the model we want to load was saved
+                with.
+            show_progress: A Bool representing whether we show the progress of
+                the function or not.
+
+        Returns:
+            A Doc2VecCord19().
+        """
+        # Load Doc2Vec Model.
+        new_doc2vec_model = cls(corpus=None, _use_saved=True, _saved_id=model_id,
+                                show_progress=show_progress)
+        return new_doc2vec_model
+
+    @classmethod
+    def model_saved(cls, model_id=None):
+        """
+        Check if there is a Doc2Vec model saved.
+        - If no 'model_id' is provided, checks if the last used Doc2Vec model
+        was saved.
+
+        Args:
+            model_id: A String with the ID of the model we want to check.
+
+        Returns:
+            A Bool showing if there is a model saved or not.
+        """
+        # Create Project Folder if it doesn't exist.
+        if not isdir(cls.data_folder):
+            mkdir(cls.data_folder)
+        # Create Model Folder if it doesn't exist.
+        model_folder_path = join(cls.data_folder, cls.model_folder)
+        if not isdir(model_folder_path):
+            mkdir(model_folder_path)
+
+        # Create file path.
+        if model_id:
+            doc2vec_model_name = cls.doc2vec_model_prefix + model_id
+            doc2vec_model_path = join(model_folder_path, doc2vec_model_name)
+        else:
+            doc2vec_model_path = join(model_folder_path, cls.doc2vec_model_file)
+
+        # Check if the file exists.
+        result = isfile(doc2vec_model_path)
+        return result
 
 
 if __name__ == '__main__':
@@ -58,10 +211,15 @@ if __name__ == '__main__':
     stopwatch = TimeKeeper()
 
     # Test the class.
-    print("\nCreating Doc2Vec model...")
     test_size = 500
-    doc_model = Doc2VecCord19(vector_size=50, paper_type='medium',
-                              corpus_size=test_size, show_progress=True)
+    print(f"\nLoading Random Sample of {big_number(test_size)} documents...")
+    rand_sample = RandomSample('medium', test_size, show_progress=True)
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
+
+    print("\nCreating Doc2Vec model...")
+    doc_model = Doc2VecCord19(corpus=rand_sample, vector_dims=100,
+                              show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
@@ -70,16 +228,34 @@ if __name__ == '__main__':
     print(doc_model.word2vec_model['the'])
 
     print("\nShow Part of the vocabulary:")
-    for index, word in enumerate(doc_model.word2vec_model.index_to_key):
-        if index == 10:
+    for index, doc_word in enumerate(doc_model.word2vec_model.index_to_key):
+        if index == 20:
             break
-        print(f"word #{index}/{len(doc_model.word2vec_model.index_to_key)} is {word}")
+        print(f"word #{index}/{len(doc_model.word2vec_model.index_to_key)} is {doc_word}")
 
-    test_word = 'the'
+    test_word = 'virus'
     print(f"\nShow most similar words to '{test_word}':")
     similar_words = doc_model.word2vec_model.most_similar('patient', topn=15)
-    for word in similar_words:
-        print(f" -> {word}")
+    for sim_word in similar_words:
+        print(f" -> {sim_word}")
+
+    # print("\nTesting loading Doc2Vec model...")
+    # print("Loading model...")
+    # next_doc2vec = Doc2VecCord19.load(show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+    #
+    # print("\nShow Loaded Doc2Vec Model vocabulary:")
+    # for index, doc_word in enumerate(next_doc2vec.word2vec_model.index_to_key):
+    #     if index == 20:
+    #         break
+    #     print(f"word #{index}/{len(doc_model.word2vec_model.index_to_key)} is {doc_word}")
+    #
+    # test_word = 'virus'
+    # print(f"\nShow most similar words to '{test_word}' in loaded Model:")
+    # similar_words = next_doc2vec.word2vec_model.most_similar('patient', topn=15)
+    # for sim_word in similar_words:
+    #     print(f" -> {sim_word}")
 
     print("\nDone.")
     print(f"[{stopwatch.formatted_runtime()}]\n")
