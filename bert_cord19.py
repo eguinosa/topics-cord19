@@ -5,10 +5,11 @@ from os.path import isdir, join
 
 from sentence_transformers import SentenceTransformer, util
 
+from document_model import DocumentModel
 from time_keeper import TimeKeeper
 
 
-class BertCord19:
+class BertCord19(DocumentModel):
     """
     Load and Manage the BERT pre-trained models to the get the vector
     representations of the words and documents in the CORD-19 corpus.
@@ -21,7 +22,6 @@ class BertCord19:
     # Bert Models used.
     models_dict = {
         'all-mpnet-base-v2': {
-            'similarity': 'dot_score',
             'max_seq_length': 384,
             'dimensions': 768,
             'performance': 63.30,
@@ -29,7 +29,6 @@ class BertCord19:
             'size': 420,
         },
         'all-MiniLM-L12-v2': {
-            'similarity': 'dot_score',
             'max_seq_length': 256,
             'dimensions': 384,
             'performance': 59.76,
@@ -37,7 +36,6 @@ class BertCord19:
             'size': 120,
         },
         'all-MiniLM-L6-v2': {
-            'similarity': 'dot_score',
             'max_seq_length': 256,
             'dimensions': 384,
             'performance': 58.80,
@@ -45,7 +43,6 @@ class BertCord19:
             'size': 80,
         },
         'paraphrase-MiniLM-L3-v2': {
-            'similarity': 'cos_sim',
             'max_seq_length': 128,
             'dimensions': 384,
             'performance': 50.74,
@@ -53,7 +50,6 @@ class BertCord19:
             'size': 61,
         },
         'average_word_embeddings_glove.6B.300d': {
-            'similarity': 'cos_sim',
             'max_seq_length': -1,
             'dimensions': 300,
             'performance': 36.25,
@@ -62,22 +58,25 @@ class BertCord19:
         },
     }
 
-    def __init__(self, model_name, show_progress=False):
+    def __init__(self, model_name=None, show_progress=False):
         """
         Load or Download the BERT model we are going to use to model the words
-        and documents.
+        and documents. By default, it loads the fastest model.
 
         Args:
             model_name: A String with the name of model.
             show_progress: Bool representing whether we show the progress of
                 the function or not.
         """
-        # Check if we support the Bert Model Requested.
+        # Check if a Model was provided, and if we support it.
+        if not model_name:
+            # Use the fastest model by default.
+            model_name = 'average_word_embeddings_glove.6B.300d'
         if model_name not in self.models_dict:
             raise NameError("BertCord19() doesn't support the requested model.")
-        # Save the Model's Attributes.
+
+        # Save Model's name.
         self.model_name = model_name
-        self.model_info = self.models_dict[model_name]
 
         # Check the Models' Folder exists.
         if not isdir(self.models_folder):
@@ -98,7 +97,18 @@ class BertCord19:
             if show_progress:
                 print(f"The model <{self.model_name}> downloaded and saved.")
 
-    def word2vec(self, word):
+    def model_type(self):
+        """
+        Give the type of model that was loaded. It can be either Bert or Glove.
+
+        Returns: A string with name of model the class is using.
+        """
+        if self.model_name == 'average_word_embeddings_glove.6B.300d':
+            return 'glove'
+        else:
+            return 'bert'
+
+    def word_vector(self, word):
         """
         Transform a word into a vector.
 
@@ -111,20 +121,7 @@ class BertCord19:
         result = self.model.encode(word)
         return result
 
-    def words2vec(self, words):
-        """
-        Transform a list of words into their vector representation (tensor).
-
-        Args:
-            words: List of strings containing the words.
-
-        Returns:
-            A list of word vectors.
-        """
-        result = self.model.encode(words)
-        return result
-
-    def doc2vec(self, doc_text):
+    def document_vector(self, doc_text):
         """
         Transform the text of a document into a vector.
 
@@ -136,35 +133,6 @@ class BertCord19:
         """
         result = self.model.encode(doc_text)
         return result
-
-    def docs2vecs(self, docs_texts):
-        """
-        Transform the text of the documents to their vector representation (tensor).
-
-        Args:
-            docs_texts: A list of strings with the content of the documents.
-
-        Returns:
-            A list with the tensor vector of the documents.
-        """
-        result = self.model.encode(docs_texts)
-        return result
-
-
-def similarity(text1, text2):
-    """
-    Find the similarity score between the 2 documents.
-
-    Args:
-        text1: The tensor or text of the first document.
-        text2: The tensor or text of the second document.
-
-    Returns:
-        Their similarity score.
-    """
-    result = util.cos_sim(text1, text2)
-
-    return result
 
 
 if __name__ == '__main__':
@@ -180,13 +148,13 @@ if __name__ == '__main__':
     print("\nTesting word similarities (To close use [q/quit]):")
     quit_words = {'q', 'quit'}
     while True:
-        word1 = input("Type the first word: ")
+        word1 = input("\nType the first word: ")
         if word1 in quit_words:
             break
         word2 = input("Type the second word: ")
         if word2 in quit_words:
             break
-        sim_words = util.cos_sim(my_model.word2vec(word1), my_model.word2vec(word2))[0][0]
+        sim_words = util.cos_sim(my_model.word_vector(word1), my_model.word_vector(word2))[0][0]
         print("The words similarity:")
         print(sim_words)
 
