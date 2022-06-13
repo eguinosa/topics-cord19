@@ -1,16 +1,16 @@
 # Gelin Eguinosa Rosique
 
-import numpy
-import torch
+import numpy as np
 import umap
 import hdbscan
 from sentence_transformers import util
-from pprint import pprint
 
+from corpus_cord19 import CorpusCord19
+from document_model import DocumentModel
 from random_sample import RandomSample
 from bert_cord19 import BertCord19
 from doc_tokenizers import doc_tokenizer
-from extra_funcs import progress_bar
+from extra_funcs import progress_bar, big_number
 from time_keeper import TimeKeeper
 
 
@@ -22,53 +22,26 @@ class TopicModel:
     data_folder = 'project_data'
 
     # The Doc Models available to use.
-    doc_model_types = ['doc2vec', 'glove', 'bert', 'specter', 'longformer']
+    supported_doc_models = ['doc2vec', 'glove', 'bert', 'specter']
 
-    def __init__(self, doc_type='medium', sample_size=-1, model_type='bert',
-                 model_name='average_word_embeddings_glove.6B.300d',
+    def __init__(self, corpus: CorpusCord19, doc_model: DocumentModel,
                  show_progress=False):
         """
-        Create a Random sample of CORD-19 papers with the specified 'doc_type'.
-        Use the 'model_type' to create the embeddings of the words and documents,
-        and with these embeddings find the topics present in the corpus.
 
         Args:
-            doc_type: The type of Papers we want to use for the Sample (small,
-                medium or big).
-            sample_size: An int with size of the sample. The default value '-1'
-                represents all the papers available with the specified paper
-                type.
-            model_type: The Document and Word Model we are going to use to
-                create the embeddings.
-            model_name: For some models like BERT or GloVe that have models
-                of different sizes and speed, we need the name of the specific
-                model we want to use.
-            show_progress: A Bool representing whether we show the progress of
-                the function or not.
+            corpus:
+            doc_model:
+            show_progress:
         """
+        # Save Corpus & Model.
+        self.corpus = corpus
+        self.corpus_ids = self.corpus.papers_cord_uids()
+        self.doc_model = doc_model
+        self.model_type = self.doc_model.model_type()
+
         # Check we are using a supported model.
-        if model_type not in self.doc_model_types:
-            raise NameError(f"The model type <{model_type}> is not supported.")
-        # Save the model type.
-        self.model_type = model_type
-
-        # Load the CORD-19 sample we are going to use.
-        if show_progress:
-            print("Creating RandomSample()...")
-        self.corpus_sample = RandomSample(paper_type=doc_type,
-                                          sample_size=sample_size,
-                                          show_progress=show_progress)
-        # Save the Papers() class in case we want to access individual papers.
-        self.corpus_manager = self.corpus_sample.cord19_papers
-        # Also, the IDs of the Papers in the Sample.
-        self.corpus_cord_uids = self.corpus_sample.sample_cord_uids
-
-        # Load Document & Word Model (All in one class).
-        # Using bert for now.
-        if show_progress:
-            print(f"Loading the Document Model <{model_type}>...")
-        self.doc_model = BertCord19(model_name=model_name,
-                                    show_progress=show_progress)
+        if self.model_type not in self.supported_doc_models:
+            raise NameError(f"The model type <{self.model_type}> is not supported.")
 
         # Calculate the embeddings of the words and documents.
         if show_progress:
@@ -80,8 +53,8 @@ class TopicModel:
         if show_progress:
             print("Finding Topics...")
         self.topic_embeds = self._find_topics(show_progress=show_progress)
-        self.topic_docs = self._find_doc_topics()
-        self.topic_words = self._find_word_topics()
+        self.topic_docs = self._find_doc_topics(show_progress=show_progress)
+        self.topic_words = self._find_word_topics(show_progress=show_progress)
         self.num_topics = len(self.topic_embeds)
 
     def top_topics(self):
@@ -92,7 +65,8 @@ class TopicModel:
         Returns:
             A list of tuples with the topics' ID and their document count.
         """
-        topic_docs = [(top_id, len(docs_list)) for top_id, docs_list in self.topic_docs.items()]
+        topic_docs = [(topic_id, len(docs_list))
+                      for topic_id, docs_list in self.topic_docs.items()]
         topic_docs.sort(key=lambda count: count[1], reverse=True)
         return topic_docs
 
@@ -128,7 +102,7 @@ class TopicModel:
         top_words = []
         for topic_id, _ in self.top_topics():
             top_words.append(self.top_words_topic(topic_id, num_words=num_words))
-        # List of words per topic.
+        # Per topic, a list with the words and their similarity to the topic.
         return top_words
 
     def _create_word_embeddings(self, show_progress=False):
@@ -144,18 +118,18 @@ class TopicModel:
         """
         # Progress Bar variables.
         count = 0
-        total = len(self.corpus_cord_uids)
+        total = len(self.corpus_ids)
 
         # Go through the tokens of all the documents in the Corpus' Sample.
         words_embeddings = {}
-        for document in self.corpus_sample.docs_full_texts():
+        for document in self.corpus.all_papers_content():
             doc_tokens = doc_tokenizer(document)
             # Add the new words from the document.
             for doc_word in doc_tokens:
                 if doc_word not in words_embeddings:
-                    word_embed = self.doc_model.word2vec(doc_word)
+                    word_embed = self.doc_model.word_vector(doc_word)
                     # Ignore words that the model can't encode (Zero Values).
-                    if not numpy.any(word_embed):
+                    if not np.any(word_embed):
                         continue
                     words_embeddings[doc_word] = word_embed
             # Show Progress.
@@ -181,25 +155,27 @@ class TopicModel:
         """
         # Progress Bar variables.
         count = 0
-        total = len(self.corpus_cord_uids)
+        total = len(self.corpus_ids)
 
         docs_embeddings = {}
-        for cord_uid in self.corpus_cord_uids:
-            # Select the content of the paper depending on the model used.
-            if self.model_type == 'glove':
-                # No length restrictions, use all text.
-                doc_content = self.corpus_manager.paper_full_text(cord_uid)
+        for cord_uid in self.corpus_ids:
+            # Depending on the model, select the content of the paper to encode.
+            if self.model_type in {'doc2vec', 'glove'}:
+                # No text size or token count restrictions, use all text.
+                doc_content = self.corpus.paper_content(cord_uid)
+                doc_embedding = self.doc_model.document_vector(doc_content)
             elif self.model_type == 'bert':
                 # BERT has a length limit, use only title and abstract.
-                doc_content = self.corpus_manager.paper_title_abstract(cord_uid)
+                doc_content = self.corpus.paper_title_abstract(cord_uid)
+                doc_embedding = self.doc_model.document_vector(doc_content)
+            # With Specter, load the embedding from CORD-19 dataset.
             elif self.model_type == 'specter':
-                # SPECTER only uses the title and abstract.
-                doc_content = self.corpus_manager.paper_title_abstract(cord_uid)
+                doc_vector = self.corpus.paper_embedding(cord_uid)
+                doc_embedding = np.array(doc_vector)
             else:
-                raise NameError(f"We don't support <{self.model_type}> yet.")
+                raise NameError(f"We don't support the Model<{self.model_type}> yet.")
 
-            # Encode the Documents' Content.
-            doc_embedding = self.doc_model.doc2vec(doc_content)
+            # Save Document's embedding.
             docs_embeddings[cord_uid] = doc_embedding
 
             # Progress.
@@ -220,21 +196,27 @@ class TopicModel:
         Returns:
             A dictionary with the topics and their embeddings.
         """
-        # Get Document Embeddings
+        # Get Document Embeddings.
         doc_embeddings = list(self.doc_embeds.values())
 
         # Use UMAP to reduce the dimensions of the embeddings.
+        if show_progress:
+            print("UMAP: Reducing dimensions of the papers...")
         umap_embeddings = umap.UMAP(n_neighbors=15,
                                     n_components=5,
                                     metric='cosine').fit_transform(doc_embeddings)
 
         # Use HDBSCAN to find the cluster of documents in the vector space.
+        if show_progress:
+            print("HDBSCAN: Creating topic clusters with the documents...")
         clusterer = hdbscan.HDBSCAN(min_cluster_size=15,
                                     metric='euclidean',
                                     cluster_selection_method='eom')
         cluster_labels = clusterer.fit(umap_embeddings)
 
         # Save the embeddings per topic label.
+        if show_progress:
+            print("Creating the topic's embeddings...")
         topic_labels = cluster_labels.labels_
         topic_label_embeds = {}
         for label, doc_embed in zip(topic_labels, doc_embeddings):
@@ -247,6 +229,9 @@ class TopicModel:
             else:
                 topic_label_embeds[label].append(doc_embed)
 
+        # Progress bar variables.
+        count = 0
+        total = len(topic_label_embeds)
         # Find the average embed per label.
         topic_embeddings = {}
         for topic_label, label_embeds in topic_label_embeds.items():
@@ -257,9 +242,16 @@ class TopicModel:
             # topic_torch_embed = torch.from_numpy(mean_embeds)
             # # Save the topic embedding.
             # topic_embeddings[topic_label] = topic_torch_embed
-            mean_embeds = numpy.mean(label_embeds, axis=0)
+
+            # Use Numpy to get the average embedding.
+            mean_embeds = np.mean(label_embeds, axis=0)
             topic_embeddings[topic_label] = mean_embeds
 
+            # Progress.
+            if show_progress:
+                progress_bar(count, total)
+
+        # The embeddings of the topics.
         return topic_embeddings
 
     def _find_doc_topics(self, show_progress=False):
@@ -315,7 +307,7 @@ class TopicModel:
 
         # Sort the words' lists using their similarity to their topic.
         for tuple_word_sim in topic_words.values():
-            tuple_word_sim.sort(key=lambda word_sim: word_sim[1], reverse=True)
+            tuple_word_sim.sort(key=lambda word_tuple: word_tuple[1], reverse=True)
         return topic_words
 
     def _closest_topic(self, embedding):
@@ -338,11 +330,11 @@ class TopicModel:
         max_similarity = float(util.cos_sim(embedding, topic_embed))
 
         # Go through the rest of the topics.
-        for topic, topic_embed in topic_iterator:
+        for topic_id, topic_embed in topic_iterator:
             new_similarity = float(util.cos_sim(embedding, topic_embed))
             if new_similarity > max_similarity:
                 # New closer topic.
-                closest_topic = topic
+                closest_topic = topic_id
                 max_similarity = new_similarity
 
         # The closest topic ID.
@@ -354,9 +346,20 @@ if __name__ == '__main__':
     stopwatch = TimeKeeper()
 
     # Test TopicModel class.
+    test_size = 3_000
+    print(f"\nLoading Random Sample of {big_number(test_size)} documents...")
+    rand_sample = RandomSample('medium', test_size, show_progress=True)
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
+
+    print("\nLoading Bert Model...")
+    bert_name = 'paraphrase-MiniLM-L3-v2'
+    my_model = BertCord19(model_name=bert_name, show_progress=True)
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
+
     print("\nLoading Topic Model...")
-    topic_model = TopicModel(doc_type='medium', sample_size=1_000,
-                             model_type='glove', show_progress=True)
+    topic_model = TopicModel(corpus=rand_sample, doc_model=my_model, show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
@@ -372,10 +375,9 @@ if __name__ == '__main__':
     print(f"\nTop {top_n} words per topic:")
     words_per_topic = topic_model.all_topics_top_words(top_n)
     for i, word_list in enumerate(words_per_topic):
-        print(f"----> Topic <{i}>:")
+        print(f"\n----> Topic <{i}>:")
         for word_sim in word_list:
             print(word_sim)
 
     print("\nDone.")
     print(f"[{stopwatch.formatted_runtime()}]\n")
-
