@@ -244,8 +244,6 @@ class PapersAnalyzer:
         Create a sequence with the text of random papers selected from the given
         paper size. If 'n' is -1, then we return all the available papers in a
         random order.
-        *** Papers with more than 1,000,000 characters are ignored (they have
-        conflicts with Spacy).
 
         Args:
             papers_size: A string containing 'small', 'medium' or 'big'.
@@ -325,6 +323,16 @@ if __name__ == '__main__':
     print(f"The amount of Small Papers is: {big_number(small_count)}")
     print(f"The amount of Medium Papers is: {big_number(medium_count)}")
     print(f"The amount of Big Papers is: {big_number(big_count)}")
+
+    # print("\nCounting papers with over a million characters...")
+    # the_count = 0
+    # super_big = 0
+    # for doc_content in analyzer.big_papers_content():
+    #     if len(doc_content) >= 1_000_000:
+    #         super_big += 1
+    #     the_count += 1
+    #     progress_bar(the_count, big_count)
+    # print(f"\nPapers with over a million characters: {big_number(super_big)}")
 
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]\n")
