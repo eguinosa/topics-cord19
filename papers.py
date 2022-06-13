@@ -10,7 +10,7 @@ from corpus_cord19 import CorpusCord19
 from extra_funcs import progress_bar
 from random import choice
 from time_keeper import TimeKeeper
-from extra_funcs import number_to_3digits
+from extra_funcs import number_to_3digits, big_number
 
 
 class Papers(CorpusCord19):
@@ -426,7 +426,7 @@ if __name__ == '__main__':
 
     # Get the amount of documents the dataset has.
     num_papers = len(cord19_papers.papers_index)
-    print(f"\nThe current CORD-19 dataset has {num_papers} documents.")
+    print(f"\nThe current CORD-19 dataset has {big_number(num_papers)} documents.")
 
     # Get the 'cord_uid' of one of the papers.
     cord19_ids = cord19_papers.papers_cord_uids()
