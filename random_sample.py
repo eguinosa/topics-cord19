@@ -20,8 +20,8 @@ class RandomSample(CorpusCord19):
     sample_index_file = 'random_sample_index.json'
     sample_index_prefix = 'random_sample_index_'
 
-    def __init__(self, paper_type='all', sample_size=-1, use_saved=False,
-                 sample_id=None, show_progress=False):
+    def __init__(self, paper_type='all', sample_size=-1, show_progress=False,
+                 _use_saved=False, _saved_id=None):
         """
         Create a Random Sample of documents from the CORD-19 dataset, or load a
         previously created Random Sample.
@@ -32,9 +32,9 @@ class RandomSample(CorpusCord19):
             sample_size: An int with size of the sample. The default value '-1'
                 represents all the papers available with the specified paper
                 type.
-            use_saved: A Bool indicating if we are loading the sample from a
+            _use_saved: A Bool indicating if we are loading the sample from a
                 file.
-            sample_id: The ID of the sample we want to load. It can be used when
+            _saved_id: The ID of the sample we want to load. It can be used when
                 we previously saved a sample with an ID, to avoid loading the
                 last used sample.
             show_progress: A Bool representing whether we show the progress of
@@ -46,11 +46,11 @@ class RandomSample(CorpusCord19):
         self.cord19_papers = self.analyzed_papers.cord19_papers
 
         # Use a saved Random Sample.
-        if use_saved:
+        if _use_saved:
             # Check if the sample index is locally available.
-            if sample_id:
+            if _saved_id:
                 # Load a specific Sample, previously saved with an ID.
-                saved_sample_file = self.sample_index_prefix + sample_id + '.json'
+                saved_sample_file = self.sample_index_prefix + _saved_id + '.json'
                 self.sample_index_path = join(self.data_folder, saved_sample_file)
             else:
                 # Load last used Sample.
@@ -173,6 +173,24 @@ class RandomSample(CorpusCord19):
             json.dump(self.sample_cord_uids, f)
 
     @classmethod
+    def load(cls, sample_id=None, show_progress=False):
+        """
+        Load a previously saved Random Sample.
+        - If no 'sample_id' is provided, it loads the last used RandomSample.
+
+        Args:
+            sample_id: A string with the ID that the Random Sample was saved with.
+            show_progress: A Bool representing whether we show the progress of
+                the function or not.
+
+        Returns: A RandomSample()
+        """
+        # Load RandomSample
+        saved_sample = cls(_use_saved=True, _saved_id=sample_id,
+                           show_progress=show_progress)
+        return saved_sample
+
+    @classmethod
     def sample_saved(cls, sample_id=None):
         """
         Check if we can load a previously saved Random Sample, searching for the
@@ -236,7 +254,7 @@ if __name__ == '__main__':
     stopwatch = TimeKeeper()
 
     # Test the class.
-    test_size = 3_000
+    test_size = 1_000
     print(f"\nCreating a Random Sample of {big_number(test_size)} documents...")
     sample = RandomSample('medium', test_size, show_progress=True)
     print("Done.")
@@ -255,7 +273,7 @@ if __name__ == '__main__':
     print(f"[{stopwatch.formatted_runtime()}]")
 
     print("\nLoading old Random Sample:...")
-    old_sample = RandomSample(use_saved=True, sample_id='01')
+    old_sample = RandomSample.load(sample_id='01')
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
