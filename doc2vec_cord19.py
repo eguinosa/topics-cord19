@@ -20,7 +20,7 @@ class Doc2VecCord19(DocumentModel):
     """
     # Class Data Locations.
     data_folder = 'project_data'
-    model_folder = 'doc2vec_cord19'
+    model_folder = 'doc2vec_models'
     doc2vec_model_file = 'doc2vec_cord19_model'
     doc2vec_model_prefix = 'doc2vec_cord19_model_'
     word2vec_model_file = 'word2vec_model'
@@ -114,6 +114,9 @@ class Doc2VecCord19(DocumentModel):
         Returns:
             The vector of the word.
         """
+        # Check if the word exists in the dictionary of the model.
+        if word not in self.word2vec_model:
+            return [0]
         # Use the Word2Vec Model.
         result = self.word2vec_model[word]
         return result
@@ -213,12 +216,13 @@ if __name__ == '__main__':
     # Test the class.
     test_size = 500
     print(f"\nLoading Random Sample of {big_number(test_size)} documents...")
-    rand_sample = RandomSample('medium', test_size, show_progress=True)
+    model_corpus = RandomSample('medium', test_size, show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
+    # Create Doc2Vec model.
     print("\nCreating Doc2Vec model...")
-    doc_model = Doc2VecCord19(corpus=rand_sample, vector_dims=100,
+    doc_model = Doc2VecCord19(corpus=model_corpus, vector_dims=300,
                               show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
@@ -238,6 +242,14 @@ if __name__ == '__main__':
     similar_words = doc_model.word2vec_model.most_similar('patient', topn=15)
     for sim_word in similar_words:
         print(f" -> {sim_word}")
+
+    # Get the embedding of input words.
+    while True:
+        input_word = input("\nFrom which word do you want to get the embedding?\n ")
+        if not input_word or input_word in {'q', 'quit'}:
+            break
+        print(f"Word vector of {input_word}:")
+        print(doc_model.word_vector(input_word))
 
     # print("\nTesting loading Doc2Vec model...")
     # print("Loading model...")
@@ -259,3 +271,31 @@ if __name__ == '__main__':
 
     print("\nDone.")
     print(f"[{stopwatch.formatted_runtime()}]\n")
+
+    # **************************************************************
+    # <--- To Create Doc2Vec model of the entire CORD-19 corpus --->
+    # (Done - 9 hours for 138,967 documents)
+    # **************************************************************
+
+    # # Load Corpus.
+    # print(f"\nLoading CORD-19 corpus...")
+    # model_corpus = Papers(show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+
+    # # Check the amount of documents loaded.
+    # num_papers = len(model_corpus.papers_index)
+    # print(f"\nThe current CORD-19 dataset has {big_number(num_papers)} documents.")
+
+    # # Create Doc2Vec model.
+    # print("\nCreating Doc2Vec model...")
+    # doc_model = Doc2VecCord19(corpus=model_corpus, vector_dims=300,
+    #                           show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+
+    # # Save CORD-19 Corpus Word2Vec Model.
+    # print("\nSaving the Doc2Vec Model of the CORD-19 Dataset...")
+    # doc_model.save_model('cord19_dataset')
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
