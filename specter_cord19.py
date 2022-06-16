@@ -34,13 +34,17 @@ class SpecterCord19(DocumentModel):
             word: A string with the word we want to encode.
 
         Returns:
-            A Tensor containing the embedding of the word.
+            A Numpy Array containing the embedding of the word.
         """
+        # Tokenize and Encode word.
         word_inputs = self.tokenizer([word], padding=True, truncation=True,
                                      return_tensors="pt", max_length=512)
         input_embeds = self.model(**word_inputs)
         word_embed = input_embeds.last_hidden_state[:, 0, :][0]
-        return word_embed
+
+        # Transform the tensor embedding into a numpy array.
+        numpy_embed = word_embed.detach().numpy()
+        return numpy_embed
 
     def document_vector(self, title_abstract):
         """
@@ -52,13 +56,17 @@ class SpecterCord19(DocumentModel):
                 paper.
 
         Returns:
-           A tensor with the embedding of the document.
+           A Numpy Array with the embedding of the document.
         """
+        # Tokenize and Encode document.
         doc_inputs = self.tokenizer([title_abstract], padding=True, truncation=True,
                                     return_tensors="pt", max_length=512)
         input_embeds = self.model(**doc_inputs)
         doc_embed = input_embeds.last_hidden_state[:, 0, :][0]
-        return doc_embed
+
+        # Transform the tensor embedding into a numpy array.
+        numpy_embed = doc_embed.detach().numpy()
+        return numpy_embed
 
 
 if __name__ == '__main__':
