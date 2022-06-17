@@ -73,7 +73,7 @@ if __name__ == '__main__':
     # Test save_titles_abstracts():
     doc_count = 30
     print(f"\nCreating Random Sample of {doc_count} medium documents.")
-    my_sample = RandomSample(paper_type='big', sample_size=doc_count,
+    my_sample = RandomSample(paper_type='small', sample_size=doc_count,
                              show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
