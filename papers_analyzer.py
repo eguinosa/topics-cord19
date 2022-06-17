@@ -13,6 +13,9 @@ class PapersAnalyzer:
     """
     Scans the CORD-19 papers to organize them by certain characteristics and
     return subsets of the papers by these characteristics when required.
+        - Small: For papers containing one paragraph or less (0-300 characters).
+        - Medium: For papers containing one page or less (301-3,000).
+        - Big: For papers containing more than one page (3,001 or more).
     """
     # Class Data Locations
     data_folder = 'project_data'
