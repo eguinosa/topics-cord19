@@ -9,6 +9,8 @@ from corpus_cord19 import CorpusCord19
 from document_model import DocumentModel
 from random_sample import RandomSample
 from bert_cord19 import BertCord19
+from specter_cord19 import SpecterCord19
+from doc2vec_cord19 import Doc2VecCord19
 from doc_tokenizers import doc_tokenizer
 from extra_funcs import progress_bar, big_number
 from time_keeper import TimeKeeper
@@ -25,13 +27,23 @@ class TopicModel:
     supported_doc_models = ['doc2vec', 'glove', 'bert', 'specter']
 
     def __init__(self, corpus: CorpusCord19, doc_model: DocumentModel,
-                 show_progress=False):
+                 show_progress=False, _used_saved=False, _saved_id=None):
         """
+        Find the topics in the provided 'corpus' using 'doc_model' to get the
+        embedding of the Documents and Words in the CORD-19 corpus selected.
+            - If '_used_saved' is True, loads a previously used and saved model
+            depending on the value of '_saved_id'.
+            - If no ID is provided in 'saved_id', loads the last used model.
 
         Args:
-            corpus:
-            doc_model:
-            show_progress:
+            corpus: A Cord-19 Corpus class with a selection of papers.
+            doc_model: A Document Model class used to get the embeddings of the
+                words and documents in the corpus.
+            show_progress: Bool representing whether we show the progress of
+                the function or not.
+            _used_saved: A Bool to know if we need to load the Topic Model from
+                a file or recalculate it.
+            _saved_id: A string with the ID of a previously saved Topic Model.
         """
         # Save Corpus & Model.
         self.corpus = corpus
@@ -346,15 +358,24 @@ if __name__ == '__main__':
     stopwatch = TimeKeeper()
 
     # Test TopicModel class.
-    test_size = 3_000
+    test_size = 500
     print(f"\nLoading Random Sample of {big_number(test_size)} documents...")
     rand_sample = RandomSample('medium', test_size, show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
+    # Load Document Model.
+
     print("\nLoading Bert Model...")
     bert_name = 'paraphrase-MiniLM-L3-v2'
     my_model = BertCord19(model_name=bert_name, show_progress=True)
+
+    # print("\nLoading Specter model...")
+    # my_model = SpecterCord19()
+
+    # print("\nLoading Doc2Vec model of the Cord-19 Dataset...")
+    # my_model = Doc2VecCord19.load('cord19_dataset', show_progress=True)
+
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
