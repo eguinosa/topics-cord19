@@ -455,60 +455,38 @@ def paper_json_body_text(json_file_path):
 
 
 if __name__ == '__main__':
+    # Record the Runtime of the Program
+    stopwatch = TimeKeeper()
 
-    print("\nLoading Papers...")
-    my_papers = Papers(show_progress=True)
+    # <<< Testing the Papers class >>>
+    # Load the CORD-19 Dataset
+    print("\nLoading the CORD-19 Dataset...")
+    cord19_papers = Papers(show_progress=True)
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
 
-    print("Extracting Content...")
-    my_paper_content = my_papers.paper_content('0z893ozl')
-    print("The papers content:\n--------------------- ")
-    print(my_paper_content)
+    # Get the amount of documents the dataset has.
+    num_papers = len(cord19_papers.papers_index)
+    print(f"\nThe current CORD-19 dataset has {big_number(num_papers)} documents.")
 
-    # # Record the Runtime of the Program
-    # stopwatch = TimeKeeper()
-    #
-    # # <<< Testing the Papers class >>>
-    # # Load the CORD-19 Dataset
-    # print("\nLoading the CORD-19 Dataset...")
-    # cord19_papers = Papers(show_progress=True)
-    # print("Done.")
-    # print(f"[{stopwatch.formatted_runtime()}]")
-    #
-    # # Get the amount of documents the dataset has.
-    # num_papers = len(cord19_papers.papers_index)
-    # print(f"\nThe current CORD-19 dataset has {big_number(num_papers)} documents.")
-    #
-    # # Get the 'cord_uid' of one of the papers.
-    # cord19_ids = cord19_papers.papers_cord_uids()
-    # rand_cord_uid = choice(cord19_ids)
-    #
-    # # Getting the embedding of one of the papers.
-    # print(f"\nGetting the Embedding for the Paper <{rand_cord_uid}>...")
-    # result = cord19_papers.paper_embedding(rand_cord_uid)
-    # print(f"The Embedding is:")
-    # print(result)
-    #
-    # # Getting the title & abstract of one of the papers.
-    # print(f"\nGetting the Title & Abstract of the Paper <{rand_cord_uid}>...")
-    # result = cord19_papers.paper_title_abstract(rand_cord_uid)
-    # print("Title & Abstract:\n")
-    # print(result)
+    # Get the 'cord_uid' of one of the papers.
+    cord19_ids = cord19_papers.papers_cord_uids()
+    rand_cord_uid = choice(cord19_ids)
 
-    # # Getting the text of one of the papers.
-    # print(f"\nGetting the content of the Paper <{rand_cord_uid}>...")
-    # result = cord19_papers.paper_content(rand_cord_uid)
-    # filename = 'output.txt'
-    # print(f"The content was printed to '{filename}'.")
-    # with open(filename, 'w') as f:
-    #     print(result, file=f)
+    # Getting the embedding of one of the papers.
+    print(f"\nGetting the Embedding for the Paper <{rand_cord_uid}>...")
+    result = cord19_papers.paper_embedding(rand_cord_uid)
+    print(f"The Embedding is:")
+    print(result)
 
-    # # Getting the full text of one of the papers.
-    # print(f"\nGetting the full text of the Paper <{rand_cord_uid}>...")
-    # result = cord19_papers.paper_full_text(rand_cord_uid)
-    # filename = 'output.txt'
-    # print(f"The full text was printed to '{filename}'.")
-    # with open(filename, 'w') as f:
-    #     print(result, file=f)
-    #
-    # print("\nDone.")
-    # print(f"[{stopwatch.formatted_runtime()}]")
+    # Getting the text of one of the papers.
+    print(f"\nGetting the content of the Paper <{rand_cord_uid}>...")
+    result = cord19_papers.paper_content(rand_cord_uid)
+    # Trim the size of the paper's content.
+    if len(result) > 1_500:
+        result = result[:1_500] + '...'
+    print("The Content of the paper.")
+    print(result)
+
+    print("\nDone.")
+    print(f"[{stopwatch.formatted_runtime()}]")
