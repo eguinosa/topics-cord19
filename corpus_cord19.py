@@ -90,7 +90,7 @@ class CorpusCord19(ABC):
         if title_text:
             title_abstract_text += '<< Title >>\n' + title_text
         if abstract_text:
-            title_abstract_text += '\n\n' + '<< Abstract >>\n' + abstract_text
+            title_abstract_text += '\n\n<< Abstract >>\n' + abstract_text
         # Text with formatted Title & Abstract.
         return title_abstract_text
 
@@ -113,7 +113,7 @@ class CorpusCord19(ABC):
         if formatted_title_abstract:
             full_text += formatted_title_abstract
         if content_body_text:
-            full_text += '\n\n' + content_body_text
+            full_text += '\n\n<<--Body Text-->>\n' + content_body_text
         # The Content of the Paper (formatted)
         return full_text
 
