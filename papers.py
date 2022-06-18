@@ -5,10 +5,10 @@ import json
 from os import mkdir
 from os.path import join, isfile, isdir
 from collections import defaultdict
+from random import choice
 
 from corpus_cord19 import CorpusCord19
 from extra_funcs import progress_bar
-from random import choice
 from time_keeper import TimeKeeper
 from extra_funcs import number_to_3digits, big_number
 
@@ -36,8 +36,8 @@ class Papers(CorpusCord19):
         the current CORD-19 dataset and save all the information of interest.
 
         Also, load the cord_19_embeddings to create an index and save them in
-        100 different dictionaries, so they are quickly loaded without
-        occupying too much memory.
+        a group of dictionaries, so they are quickly loaded without occupying
+        too much memory.
 
         Args:
             show_progress: Bool representing whether we show the progress of
@@ -141,7 +141,7 @@ class Papers(CorpusCord19):
                 pmc_json_files = row['pmc_json_files'].split('; ')
 
                 # Save all the information of the current paper, or update it
-                # if we have found this 'cord_uid' before. Also, check if the
+                # if we have found this 'cord_uid' before. Also, check if they
                 # are not empty.
                 current_paper = papers_index[cord_uid]
                 current_paper['cord_uid'] = cord_uid
@@ -159,7 +159,7 @@ class Papers(CorpusCord19):
                     count += 1
                     progress_bar(count, total)
 
-        # Transform the papers' index from a 'defaultdict' to a normal dictionary.
+        # Transform the papers' index from a DefaultDict() to a normal dictionary.
         papers_index = dict(papers_index) 
         return papers_index
 
@@ -167,7 +167,7 @@ class Papers(CorpusCord19):
         """
         Load all the embeddings of the documents from the current CORD-19
         dataset and save them in several dictionaries so when needed they can
-        be loaded quickly and without occupying to much space in memory.
+        be loaded quickly and without occupying too much space in memory.
 
         We create an index with the 'cord_uid' of the papers and the location of
         the dictionary that contains them.
@@ -268,7 +268,25 @@ class Papers(CorpusCord19):
         all_cord_uids = list(self.papers_index)
         return all_cord_uids
 
-    def paper_title_abstract(self, cord_uid):
+    def paper_title(self, cord_uid):
+        """
+        Find the title of the CORD-19 paper specified by the 'cord_uid'
+        identifier, and return them together as a string.
+
+        Args:
+            cord_uid: The Unique Identifier of the CORD-19 paper.
+
+        Returns:
+            A string containing the title of the paper.
+        """
+        # Use dictionary of the paper.
+        paper_dict = self.papers_index[cord_uid]
+        title_text = paper_dict['title']
+        # Remove empty space at the beginning and end of the text.
+        title_text = title_text.strip()
+        return title_text
+
+    def paper_abstract(self, cord_uid):
         """
         Find the title and abstract of the CORD-19 paper specified by the
         'cord_uid' identifier, and return them together as a string.
@@ -279,10 +297,12 @@ class Papers(CorpusCord19):
         Returns:
             A string containing the title and abstract of the paper.
         """
-        # Get the dictionary with the info of the paper.
+        # Use dictionary of the paper.
         paper_dict = self.papers_index[cord_uid]
-        title_abstract = paper_dict['title'] + '\n\n' + paper_dict['abstract']
-        return title_abstract
+        abstract_text = paper_dict['abstract']
+        # Remove empty space at the beginning and end of the text.
+        abstract_text = abstract_text.strip()
+        return abstract_text
 
     def paper_body_text(self, cord_uid):
         """
@@ -305,34 +325,18 @@ class Papers(CorpusCord19):
         if 'pdf_json_files' in paper_dict:
             doc_json_files += paper_dict['pdf_json_files']
 
-        # Where we are going to store the text of the paper.
-        body_text = ''
+        # Load the content of all the paper's files, empty string as default.
+        body_texts = ['']
         # Access the files and extract the text.
         for doc_json_file in doc_json_files:
             doc_json_path = join(self.cord19_data_folder, self.current_dataset, doc_json_file)
-            with open(doc_json_path, 'r') as f_json:
-                # Get the dictionary containing all the info of the document.
-                full_text_dict = json.load(f_json)
+            new_body_text = paper_json_body_text(doc_json_path)
+            body_texts.append(new_body_text)
 
-                # Get all the sections in the body of the document.
-                last_section = ''
-                for paragraph_dict in full_text_dict['body_text']:
-                    section_name = paragraph_dict['section']
-                    paragraph_text = paragraph_dict['text']
-                    # Check if we are still on the same section, or a new one.
-                    if section_name == last_section:
-                        body_text += paragraph_text + '\n\n'
-                    else:
-                        body_text += '<< ' + section_name + ' >>\n' + paragraph_text + '\n\n'
-                    # Save the section name for the next iteration.
-                    last_section = section_name
-
-                # If we find text in one of the documents, break, to avoid
-                # repeating content.
-                if body_text:
-                    break
-        # Return the found content.
-        return body_text
+        # Sort the body texts found by size.
+        body_texts.sort(key=lambda x: len(x), reverse=True)
+        # The longest body text found for the paper.
+        return body_texts[0]
 
     def paper_embedding(self, cord_uid):
         """
@@ -413,36 +417,82 @@ class Papers(CorpusCord19):
             yield self.paper_embedding(cord_uid)
 
 
-# Testing the Papers class
+def paper_json_body_text(json_file_path):
+    """
+    Extract the body text of a paper from its CORD-19 json file.
+
+    Args:
+        json_file_path: A string with the path to the PMC or PDF json file.
+
+    Returns:
+        A string with the content in the body text of the paper.
+    """
+    # Where we are going to store the text of the paper.
+    paper_body_text = ''
+
+    # Open file and extract the dictionary with the content of the paper.
+    with open(json_file_path, 'r') as f_json:
+        # Get the dictionary containing all the info of the document.
+        full_text_dict = json.load(f_json)
+
+        # Get all the sections in the body of the document.
+        last_section = ''
+        for paragraph_dict in full_text_dict['body_text']:
+            section_name = paragraph_dict['section']
+            paragraph_text = paragraph_dict['text']
+            # Check if we are still on the same section, or a new one.
+            if section_name == last_section:
+                paper_body_text += paragraph_text + '\n\n'
+            else:
+                paper_body_text += '<< ' + section_name + ' >>\n' + paragraph_text + '\n\n'
+            # Save the section name for the next iteration.
+            last_section = section_name
+
+    # Remove white spaces at the beginning and end file.
+    paper_body_text = paper_body_text.strip()
+    # The Body Text found on the JSON Paper.
+    return paper_body_text
+
+
 if __name__ == '__main__':
-    # Record the Runtime of the Program
-    stopwatch = TimeKeeper()
 
-    # Load the CORD-19 Dataset
-    print("\nLoading the CORD-19 Dataset...")
-    cord19_papers = Papers(show_progress=True)
-    print("Done.")
-    print(f"[{stopwatch.formatted_runtime()}]")
+    print("\nLoading Papers...")
+    my_papers = Papers(show_progress=True)
 
-    # Get the amount of documents the dataset has.
-    num_papers = len(cord19_papers.papers_index)
-    print(f"\nThe current CORD-19 dataset has {big_number(num_papers)} documents.")
+    print("Extracting Content...")
+    my_paper_content = my_papers.paper_content('0z893ozl')
+    print("The papers content:\n--------------------- ")
+    print(my_paper_content)
 
-    # Get the 'cord_uid' of one of the papers.
-    cord19_ids = cord19_papers.papers_cord_uids()
-    rand_cord_uid = choice(cord19_ids)
-
-    # Getting the embedding of one of the papers.
-    print(f"\nGetting the Embedding for the Paper <{rand_cord_uid}>...")
-    result = cord19_papers.paper_embedding(rand_cord_uid)
-    print(f"The Embedding is:")
-    print(result)
-
-    # Getting the title & abstract of one of the papers.
-    print(f"\nGetting the Title & Abstract of the Paper <{rand_cord_uid}>...")
-    result = cord19_papers.paper_title_abstract(rand_cord_uid)
-    print("Title & Abstract:\n")
-    print(result)
+    # # Record the Runtime of the Program
+    # stopwatch = TimeKeeper()
+    #
+    # # <<< Testing the Papers class >>>
+    # # Load the CORD-19 Dataset
+    # print("\nLoading the CORD-19 Dataset...")
+    # cord19_papers = Papers(show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+    #
+    # # Get the amount of documents the dataset has.
+    # num_papers = len(cord19_papers.papers_index)
+    # print(f"\nThe current CORD-19 dataset has {big_number(num_papers)} documents.")
+    #
+    # # Get the 'cord_uid' of one of the papers.
+    # cord19_ids = cord19_papers.papers_cord_uids()
+    # rand_cord_uid = choice(cord19_ids)
+    #
+    # # Getting the embedding of one of the papers.
+    # print(f"\nGetting the Embedding for the Paper <{rand_cord_uid}>...")
+    # result = cord19_papers.paper_embedding(rand_cord_uid)
+    # print(f"The Embedding is:")
+    # print(result)
+    #
+    # # Getting the title & abstract of one of the papers.
+    # print(f"\nGetting the Title & Abstract of the Paper <{rand_cord_uid}>...")
+    # result = cord19_papers.paper_title_abstract(rand_cord_uid)
+    # print("Title & Abstract:\n")
+    # print(result)
 
     # # Getting the text of one of the papers.
     # print(f"\nGetting the content of the Paper <{rand_cord_uid}>...")
@@ -459,6 +509,6 @@ if __name__ == '__main__':
     # print(f"The full text was printed to '{filename}'.")
     # with open(filename, 'w') as f:
     #     print(result, file=f)
-
-    print("\nDone.")
-    print(f"[{stopwatch.formatted_runtime()}]")
+    #
+    # print("\nDone.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
