@@ -119,17 +119,29 @@ class RandomSample(CorpusCord19):
         """
         return self.sample_cord_uids
 
-    def paper_title_abstract(self, cord_uid):
+    def paper_title(self, cord_uid):
         """
-        Get the title and abstract of the paper with the given 'cord_uid'.
+        Get the title of the paper with the given 'cord_uid'.
 
         Args:
-            cord_uid: String with the identifier of the paper.
+            cord_uid: A string with the identifier of the paper.
 
         Returns:
-            A string containing the title and abstract of the paper.
+            A string containing the title of the paper.
         """
-        return self.cord19_papers.paper_title_abstract(cord_uid)
+        return self.cord19_papers.paper_title(cord_uid)
+
+    def paper_abstract(self, cord_uid):
+        """
+        Get the abstract of the paper with the given 'cord_uid'.
+
+        Args:
+            cord_uid: A string with the identifier of the paper.
+
+        Returns:
+            A string containing the abstract of the paper.
+        """
+        return self.cord19_papers.paper_abstract(cord_uid)
 
     def paper_body_text(self, cord_uid):
         """
@@ -253,41 +265,54 @@ if __name__ == '__main__':
     # Record the Runtime of the Program
     stopwatch = TimeKeeper()
 
-    # Test the class.
-    test_size = 1_000
-    print(f"\nCreating a Random Sample of {big_number(test_size)} documents...")
-    sample = RandomSample('medium', test_size, show_progress=True)
-    print("Done.")
-    print(f"[{stopwatch.formatted_runtime()}]")
+    # Test the extraction of the content of the papers
+    # my_sample = RandomSample(paper_type='small', sample_size=50, show_progress=True)
+    my_sample = RandomSample.load(show_progress=True)
 
-    print("\nFirst 5 Document of the sample:")
-    count = 0
-    for doc_id in sample.sample_cord_uids[:5]:
-        count += 1
-        print(f"Document {count} - cord_uid: {doc_id}")
+    for paper_id in my_sample.papers_cord_uids():
+        paper_content = my_sample.paper_content(paper_id)
+        print(f"\nThe Content of the paper <{paper_id}>:")
+        print("-----------------------------------------")
+        print(paper_content)
+        user_input = input("\ntype q/quit to exit otherwise continue: ")
+        if user_input in {'q', 'quit', 'exit'}:
+            break
 
-    print(f"\nSaving Random Sample and creating a New One...")
-    sample.save_sample('01')
-    sample = RandomSample('medium', test_size)
-    print("Done.")
-    print(f"[{stopwatch.formatted_runtime()}]")
-
-    print("\nLoading old Random Sample:...")
-    old_sample = RandomSample.load(sample_id='01')
-    print("Done.")
-    print(f"[{stopwatch.formatted_runtime()}]")
-
-    print("\nFirst 5 Document of the New Sample:")
-    count = 0
-    for doc_id in sample.sample_cord_uids[:5]:
-        count += 1
-        print(f"Document {count} - cord_uid: {doc_id}")
-
-    print("\nFirst 5 Document of the Old Sample:")
-    count = 0
-    for doc_id in old_sample.sample_cord_uids[:5]:
-        count += 1
-        print(f"Document {count} - cord_uid: {doc_id}")
-
-    print("\nDone.")
-    print(f"[{stopwatch.formatted_runtime()}]\n")
+    # # Test the class.
+    # test_size = 1_000
+    # print(f"\nCreating a Random Sample of {big_number(test_size)} documents...")
+    # sample = RandomSample('medium', test_size, show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+    #
+    # print("\nFirst 5 Document of the sample:")
+    # count = 0
+    # for doc_id in sample.sample_cord_uids[:5]:
+    #     count += 1
+    #     print(f"Document {count} - cord_uid: {doc_id}")
+    #
+    # print(f"\nSaving Random Sample and creating a New One...")
+    # sample.save_sample('01')
+    # sample = RandomSample('medium', test_size)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+    #
+    # print("\nLoading old Random Sample:...")
+    # old_sample = RandomSample.load(sample_id='01')
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+    #
+    # print("\nFirst 5 Document of the New Sample:")
+    # count = 0
+    # for doc_id in sample.sample_cord_uids[:5]:
+    #     count += 1
+    #     print(f"Document {count} - cord_uid: {doc_id}")
+    #
+    # print("\nFirst 5 Document of the Old Sample:")
+    # count = 0
+    # for doc_id in old_sample.sample_cord_uids[:5]:
+    #     count += 1
+    #     print(f"Document {count} - cord_uid: {doc_id}")
+    #
+    # print("\nDone.")
+    # print(f"[{stopwatch.formatted_runtime()}]\n")
