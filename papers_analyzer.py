@@ -23,12 +23,15 @@ class PapersAnalyzer:
     medium_papers_index = 'medium_papers_index.json'
     big_papers_index = 'big_papers_index.json'
 
-    def __init__(self, show_progress=False):
+    def __init__(self, force_scanning=False, show_progress=False):
         """
         Scans the papers available in the CORD-19 dataset and separate them by
         the size of their content (small, medium, big).
 
         Args:
+            force_scanning: A bool to show if we force the scan of the CORD-19
+                dataset, without checking if the index files of the papers were
+                already created or not.
             show_progress: Bool representing whether we show the progress of
                 the function or not.
         """
@@ -45,8 +48,11 @@ class PapersAnalyzer:
         
         # Check if the indexes for the small, medium, big papers were already
         # created.
-        if (isfile(small_papers_path) and isfile(medium_papers_path)
-                and isfile(big_papers_path)):
+        indexes_available = (isfile(small_papers_path)
+                             and isfile(medium_papers_path)
+                             and isfile(big_papers_path))
+        # Check if it's mandatory to scan the CORD-19 papers.
+        if not force_scanning and indexes_available:
             # Load the indexes.
             with open(small_papers_path, 'r') as file:
                 self.small_papers = json.load(file)
@@ -314,6 +320,7 @@ if __name__ == '__main__':
     stopwatch = TimeKeeper()
 
     print("\nAnalyzing the Paper sizes...")
+    # analyzer = PapersAnalyzer(force_scanning=True, show_progress=True)
     analyzer = PapersAnalyzer(show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
