@@ -20,15 +20,28 @@ class CorpusCord19(ABC):
         pass
 
     @abstractmethod
-    def paper_title_abstract(self, cord_uid):
+    def paper_title(self, cord_uid):
         """
-        Get the title and abstract of the paper with the given 'cord_uid'.
+        Get the title of the paper with the given 'cord_uid'.
 
         Args:
-            cord_uid: String with the identifier of the paper.
+            cord_uid: A string with the identifier of the paper.
 
         Returns:
-            A string containing the title and abstract of the paper.
+            A string containing the title of the paper.
+        """
+        pass
+
+    @abstractmethod
+    def paper_abstract(self, cord_uid):
+        """
+        Get the abstract of the paper with the given 'cord_uid'.
+
+        Args:
+            cord_uid: A string with the identifier of the paper.
+
+        Returns:
+            A string containing the abstract of the paper.
         """
         pass
 
@@ -59,6 +72,28 @@ class CorpusCord19(ABC):
         """
         pass
 
+    def paper_title_abstract(self, cord_uid):
+        """
+        Get the title and abstract of the paper with the given 'cord_uid'.
+
+        Args:
+            cord_uid: A string with the identifier of the paper.
+
+        Returns:
+            A string containing the title and abstract of the paper.
+        """
+        # Create default text & Load Title and Abstract.
+        title_abstract_text = ''
+        title_text = self.paper_title(cord_uid)
+        abstract_text = self.paper_abstract(cord_uid)
+        # Check the Title and Abstract is not empty.
+        if title_text:
+            title_abstract_text += '<< Title >>\n' + title_text
+        if abstract_text:
+            title_abstract_text += '\n\n' + '<< Abstract >>\n' + abstract_text
+        # Text with formatted Title & Abstract.
+        return title_abstract_text
+
     def paper_content(self, cord_uid):
         """
         Get the full content of the 'cord_uid' paper.
@@ -70,7 +105,16 @@ class CorpusCord19(ABC):
             A string containing the title, abstract and body text of the paper.
         """
         # Use paper_title_abstract() & paper_body_text()
-        full_text = self.paper_title_abstract(cord_uid) + '\n\n' + self.paper_body_text(cord_uid)
+        full_text = ''
+        formatted_title_abstract = self.paper_title_abstract(cord_uid)
+        content_body_text = self.paper_body_text(cord_uid)
+
+        # Check we are not using empty content.
+        if formatted_title_abstract:
+            full_text += formatted_title_abstract
+        if content_body_text:
+            full_text += '\n\n' + content_body_text
+        # The Content of the Paper (formatted)
         return full_text
 
     def all_papers_title_abstract(self):
