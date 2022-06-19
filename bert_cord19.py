@@ -21,7 +21,9 @@ class BertCord19(DocumentModel):
 
     # Bert Models used.
     models_dict = {
+        # English Models.
         'all-mpnet-base-v2': {
+            'type': 'bert-english',
             'max_seq_length': 384,
             'dimensions': 768,
             'performance': 63.30,
@@ -29,6 +31,7 @@ class BertCord19(DocumentModel):
             'size': 420,
         },
         'all-MiniLM-L12-v2': {
+            'type': 'bert-english',
             'max_seq_length': 256,
             'dimensions': 384,
             'performance': 59.76,
@@ -36,6 +39,7 @@ class BertCord19(DocumentModel):
             'size': 120,
         },
         'all-MiniLM-L6-v2': {
+            'type': 'bert-english',
             'max_seq_length': 256,
             'dimensions': 384,
             'performance': 58.80,
@@ -43,19 +47,39 @@ class BertCord19(DocumentModel):
             'size': 80,
         },
         'paraphrase-MiniLM-L3-v2': {
+            'type': 'bert-english',
             'max_seq_length': 128,
             'dimensions': 384,
             'performance': 50.74,
             'speed': 19_000,
             'size': 61,
         },
+        # GloVe Model.
         'average_word_embeddings_glove.6B.300d': {
+            'type': 'glove',
             'max_seq_length': -1,
             'dimensions': 300,
             'performance': 36.25,
             'speed': 34_000,
             'size': 420,
         },
+        # Multilingual Models (50+ languages).
+        'paraphrase-multilingual-mpnet-base-v2': {
+            'type': 'bert-multilingual',
+            'max_seq_length': 128,
+            'dimensions': 768,
+            'performance': 53.75,
+            'speed': 2_500,
+            'size': 970,
+        },
+        'paraphrase-multilingual-MiniLM-L12-v2': {
+            'type': 'bert-multilingual',
+            'max_seq_length': 128,
+            'dimensions': 384,
+            'performance': 51.72,
+            'speed': 7_500,
+            'size': 420,
+        }
     }
 
     def __init__(self, model_name=None, show_progress=False):
@@ -103,10 +127,11 @@ class BertCord19(DocumentModel):
 
         Returns: A string with name of model the class is using.
         """
-        if self.model_name == 'average_word_embeddings_glove.6B.300d':
-            return 'glove'
-        else:
+        the_type = self.models_dict[self.model_name]
+        if 'bert' in the_type:
             return 'bert'
+        else:
+            return 'glove'
 
     def word_vector(self, word):
         """
@@ -135,6 +160,25 @@ class BertCord19(DocumentModel):
         return result
 
 
+def load_all_models():
+    """
+    Load or Download all the supported Bert Models to test they work properly.
+    """
+    # Get The Name of the models
+    supported_models = list(BertCord19.models_dict)
+
+    for model_name in supported_models:
+        print("\n-------------------------------------------------------")
+        print(f"Loading Model <{model_name}>:")
+
+        print("\nCreating Bert Model...")
+        new_model = BertCord19(model_name=model_name, show_progress=True)
+        print("Done.")
+        print(f"[{stopwatch.formatted_runtime()}]")
+
+        print(f"\nThe Model Type: {new_model.model_type()}")
+
+
 if __name__ == '__main__':
     # Record the Runtime of the Program
     stopwatch = TimeKeeper()
@@ -145,18 +189,20 @@ if __name__ == '__main__':
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
-    print("\nTesting word similarities (To close use [q/quit]):")
-    quit_words = {'q', 'quit'}
-    while True:
-        word1 = input("\nType the first word: ")
-        if word1 in quit_words:
-            break
-        word2 = input("Type the second word: ")
-        if word2 in quit_words:
-            break
-        sim_words = util.cos_sim(my_model.word_vector(word1), my_model.word_vector(word2))[0][0]
-        print("The words similarity:")
-        print(sim_words)
+    print(f"\nThe Model Type: {my_model.model_type()}")
+
+    # print("\nTesting word similarities (To close use [q/quit]):")
+    # quit_words = {'q', 'quit'}
+    # while True:
+    #     word1 = input("\nType the first word: ")
+    #     if word1 in quit_words:
+    #         break
+    #     word2 = input("Type the second word: ")
+    #     if word2 in quit_words:
+    #         break
+    #     sim_words = util.cos_sim(my_model.word_vector(word1), my_model.word_vector(word2))[0][0]
+    #     print("The words similarity:")
+    #     print(sim_words)
 
     print("\nDone.")
     print(f"[{stopwatch.formatted_runtime()}]\n")
