@@ -20,7 +20,7 @@ def save_titles_abstracts(folder_name: str = None, corpus: CorpusCord19 = None,
     with the given 'folder_name'. The 'folder_name' will be located inside the
     'data_folder'.
         - By default, if no corpus is provided, creates a Corpus using the
-        entire CORD-19 dataset.
+          entire CORD-19 dataset.
         - If no folder name is provided, uses 'default_titles_abstracts'.
 
     Args:
@@ -53,12 +53,18 @@ def save_titles_abstracts(folder_name: str = None, corpus: CorpusCord19 = None,
     total = len(papers_ids)
     # Iterate through the Papers' IDs.
     for cord_uid in papers_ids:
-        # Save the paper's title and abstract.
-        title_abstract = corpus.paper_title_abstract(cord_uid)
-        file_name = cord_uid + '.txt'
-        file_path = join(folder_path, file_name)
-        with open(file_path, 'w') as f:
-            f.write(title_abstract)
+        # Load Title & Abstract.
+        doc_title = corpus.paper_title(cord_uid)
+        doc_abstract = corpus.paper_abstract(cord_uid)
+
+        # Check they are not empty.
+        if doc_title and doc_abstract:
+            # Save the paper's title and abstract.
+            title_abstract = doc_title + '\n\n' + doc_abstract
+            file_name = cord_uid + '.txt'
+            file_path = join(folder_path, file_name)
+            with open(file_path, 'w') as f:
+                f.write(title_abstract)
 
         # Show progress.
         if show_progress:
@@ -73,8 +79,9 @@ if __name__ == '__main__':
     # Test save_titles_abstracts():
     doc_count = 30
     print(f"\nCreating Random Sample of {doc_count} medium documents.")
-    my_sample = RandomSample(paper_type='small', sample_size=doc_count,
-                             show_progress=True)
+    # my_sample = RandomSample.load()
+    # my_sample = RandomSample(paper_type='medium', sample_size=doc_count,
+    #                          show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
@@ -82,3 +89,14 @@ if __name__ == '__main__':
     save_titles_abstracts(corpus=my_sample, show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
+
+    # # Save the Title & Abstract of all the papers in the CORD-19.
+    # print("\nLoading the CORD-19 Dataset...")
+    # corpus_papers = Papers()
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+    #
+    # print("\nSaving Documents Titles and Abstracts to files...")
+    # save_titles_abstracts(corpus=corpus_papers, show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
