@@ -88,9 +88,9 @@ class CorpusCord19(ABC):
         abstract_text = self.paper_abstract(cord_uid)
         # Check the Title and Abstract is not empty.
         if title_text:
-            title_abstract_text += '<< Title >>\n' + title_text
+            title_abstract_text += '<<--Title-->>\n' + title_text
         if abstract_text:
-            title_abstract_text += '\n\n<< Abstract >>\n' + abstract_text
+            title_abstract_text += '\n\n<<--Abstract-->>\n' + abstract_text
         # Text with formatted Title & Abstract.
         return title_abstract_text
 
