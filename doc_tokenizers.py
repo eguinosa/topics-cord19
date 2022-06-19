@@ -3,7 +3,7 @@
 from unidecode import unidecode
 
 
-def doc_tokenizer(doc: str, min_len=2, max_len=15):
+def doc_tokenizer(doc: str, min_len=3, max_len=15):
     """
     Tokenize the Documents from the CORD-19 corpus.
     - Lowercase tokens.
@@ -28,68 +28,95 @@ def doc_tokenizer(doc: str, min_len=2, max_len=15):
     doc_tokens = doc.split()
 
     # Filter tokens
-    final_tokens = []
+    found_tokens = []
     for doc_token in doc_tokens:
-        # Lower and De-accent words.
+        # De-accent words and transform to Unicode characters.
         doc_token = unidecode(doc_token)
-        doc_token = doc_token.lower()
+
         # Remove single quotes and double quotes.
         doc_token = doc_token.replace("'", "")
         doc_token = doc_token.replace('"', '')
         doc_token = doc_token.replace('`', '')
+        # Remove periods at the end of words.
+        if doc_token.endswith('.'):
+            doc_token = doc_token[:-1]
+        # Ignore Parenthesis.
+        doc_token = doc_token.replace('(', '')
+        doc_token = doc_token.replace(')', '')
         # Substitute (-) with (_) to ease the recognition process.
         doc_token = doc_token.replace('-', '_')
 
-        # Substitute with <tag> Pure Numeric tokens.
-        if _is_numeric(doc_token):
-            final_tokens.append('<numeric>')
-        # Alphanumeric tokens are accepted.
-        elif _is_alpha_numeric(doc_token):
-            # Check the size of the token.
-            if min_len <= len(doc_token) <= max_len:
-                final_tokens.append(doc_token)
-        else:
-            # Analyze all other tokens and add what the method finds.
-            new_tokens = _token_analyzer(doc_token, min_len, max_len)
-            final_tokens += new_tokens
+        # Check the size of the token.
+        if len(doc_token) < min_len or max_len < len(doc_token):
+            continue
 
-    # All the tokens found.
+        # See the type of Token we have.
+        if doc_token.isalpha():
+            found_tokens.append(doc_token)
+        elif _is_alpha_underscore(doc_token):
+            found_tokens.append(doc_token)
+        elif _is_covid_related(doc_token):
+            found_tokens.append(doc_token)
+        elif _is_numeric(doc_token):
+            found_tokens.append('<numeric>')
+        elif _is_coded_name(doc_token):
+            found_tokens.append('<coded-name>')
+        elif _is_alpha_numeric(doc_token):
+            found_tokens.append('<alpha-numeric>')
+
+    # Lower all the tokens found.
+    final_tokens = [token.lower() for token in found_tokens]
     return final_tokens
 
 
-def _token_analyzer(token_word, min_len, max_len):
+def _is_alpha_underscore(word: str):
     """
-    Analyze tokens that contain at least a non-alphanumeric character.
+    Check if 'word' is a string of the type 'e_mail', 'ex_wife', etcetera. The
+    word needs to have at least a character between underscores (Ok: e_mail,
+    No: e__mail).
 
     Args:
-        token_word: The string we are going to analyze.
-        min_len: Minimum accepted length (inclusive).
-        max_len: Maximum accepted length (inclusive).
+        word: A string with the word we want to check.
 
     Returns:
-        A list of the tokens found inside this token-word.
+        True, if the word only contains alphabetical characters and underscores.
     """
-    # Go character by character.
-    found_tokens = []
-    current_token = ''
-    for pos, character in enumerate(token_word):
-        if character.isalnum() or character == '_':
-            current_token += character
+    # Check the word has underscores.
+    if '_' not in word:
+        return False
+
+    # Split Word by underscores and check the tokens.
+    split_words = word.split('_')
+    for word_section in split_words:
+        if word_section.isalpha():
             continue
+        else:
+            # All sections need to be alphabetic.
+            return False
 
-        # Some other strange character found. Split the word.
-        if (min_len <= len(current_token) <= max_len
-                and _is_alpha_numeric(current_token)):
-            # Add word to the tokens and reset.
-            found_tokens.append(current_token)
-            current_token = ''
+    # The word contains only letters and underscores.
+    return True
 
-        # Add newline, if we found a sentence delimiter.
-        if character in {'.', '?', '!', ';'}:
-            found_tokens.append('<newline>')
 
-    # The found tokens within the word.
-    return found_tokens
+def _is_covid_related(word: str):
+    """
+    Check if the 'word' is a common COVID-19 term like covid_19, sars_cov_2.
+
+    Args:
+        word: A string with the word we want to check.
+
+    Returns:
+        True, if the word is a Covid term.
+    """
+    # Clean the word
+    lower_word = word.lower()
+    lower_word = lower_word.replace('_', '')
+
+    # Check if it is a Covid Term.
+    if lower_word in {'covid19', 'sarscov2'}:
+        return True
+    else:
+        return False
 
 
 def _is_numeric(word: str):
@@ -103,53 +130,98 @@ def _is_numeric(word: str):
     Returns:
         True, if the word represent a number, False otherwise.
     """
-    filtered_word = ''
     for character in word:
         if character.isnumeric():
-            filtered_word += character
             continue
-        elif character in {'.', ',', '+', '-', '*', '/', '_'}:
+        elif character in {'.', ',', '_', '%', '-', '+'}:
             continue
         else:
             # It doesn't have recognizable numeric character.
             return False
 
-    # Check if the word without special characters is numeric.
-    result = filtered_word.isnumeric()
-    return result
+    # It's a number.
+    return True
+
+
+def _is_coded_name(word: str):
+    """
+    Check is the string 'word' represents the coded name for an entity, virus,
+    or something like that. It needs to start with a capital letter, and contain
+    only letters, numbers and maybe (.) & (_). It needs to have letters between
+    special characters (OK: AVI.C.D_03, No: AVI..C__D03)
+
+    Args:
+        word: A string with the word we want to check.
+
+    Returns:
+        True, if the word represents an entity or is a coded name for something.
+    """
+    # Check the first character is a capital letter.
+    if not word[0].isupper():
+        return False
+
+    # Check the 'word' is alphanumeric.
+    if not _is_alpha_numeric(word):
+        return False
+
+    # We have an entity or coded name.
+    return True
 
 
 def _is_alpha_numeric(word: str):
     """
-    Check if the word is alphanumeric: A word that starts with a letter, ends
-    with a letter or number, and contains only letters, numbers, and underscore
-    characters. Valid words: covid19, c23, c_14. Not
-    valid: 23232, c4_. It needs
+    Check if the string 'word' is alphanumeric. Underscores (_) and dots (.) are
+    accepted inside the word, they need to have letters between them to be
+    accepted (OK: AVI.C.D_03, No: AVI..C__D03)
 
     Args:
-        word: The string of the word we want to recognize.
+        word: A string with the word we want to check.
 
     Returns:
-        A bool showing if the word is alphanumeric.
+        True, if we have an alphanumeric 'word'.
     """
-    # Check it is not empty.
-    if len(word) == 0:
-        return False
     # Check it starts letter.
     if not word[0].isalpha():
         return False
 
-    # Check the rest of the characters.
-    for character in word[1:]:
-        if character.isalnum():
-            continue
-        elif character == '_':
+    # Create word segments.
+    word_segments = [word]
+
+    # Check if it contains underscores (_).
+    new_segments = []
+    for word_section in word_segments:
+        section_tokens = word_section.split('_')
+        for section_token in section_tokens:
+            if section_token:
+                new_segments.append(section_token)
+            else:
+                # Empty Section between underscores.
+                return False
+    # Save the new Word Segments without underscores.
+    word_segments = new_segments
+
+    # Check if it contains periods (.)
+    new_segments = []
+    for word_section in word_segments:
+        section_tokens = word_section.split('.')
+        for section_token in section_tokens:
+            if section_token:
+                new_segments.append(section_token)
+            else:
+                # Empty Section between periods.
+                return False
+    # Save the new Word Segments without underscores.
+    word_segments = new_segments
+
+    # Check all the segments are alphanumeric.
+    for word_section in word_segments:
+        if word_section.isalnum():
             continue
         else:
-            # Not alphanumeric character found.
+            # Section not alphanumeric found.
             return False
 
-    # All the words after the first one passed the test.
+    # We have an alphanumeric 'word'.
     return True
 
 
