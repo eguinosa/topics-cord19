@@ -10,7 +10,9 @@ from extra_funcs import progress_bar
 
 # Function's Data Locations
 data_folder = 'project_data'
-default_titles_abstracts = 'cord19_titles_abstracts'
+folder_titles_abstracts = 'cord19_titles_abstracts'
+vocab_titles_abstracts = 'vocabulary_titles_abstracts.json'
+vocab_all_content = 'vocabulary_all_content.json'
 
 
 def save_titles_abstracts(folder_name: str = None, corpus: CorpusCord19 = None,
@@ -38,7 +40,7 @@ def save_titles_abstracts(folder_name: str = None, corpus: CorpusCord19 = None,
     if folder_name:
         folder_path = join(data_folder, folder_name)
     else:
-        folder_path = join(data_folder, default_titles_abstracts)
+        folder_path = join(data_folder, folder_titles_abstracts)
     if not isdir(folder_path):
         mkdir(folder_path)
 
@@ -79,9 +81,9 @@ if __name__ == '__main__':
     # Test save_titles_abstracts():
     doc_count = 30
     print(f"\nCreating Random Sample of {doc_count} medium documents.")
+    my_sample = RandomSample(paper_type='medium', sample_size=doc_count,
+                             show_progress=True)
     # my_sample = RandomSample.load()
-    # my_sample = RandomSample(paper_type='medium', sample_size=doc_count,
-    #                          show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
