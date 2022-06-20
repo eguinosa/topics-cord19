@@ -27,7 +27,8 @@ class TopicModel:
     supported_doc_models = ['doc2vec', 'glove', 'bert', 'specter']
 
     def __init__(self, corpus: CorpusCord19, doc_model: DocumentModel,
-                 show_progress=False, _used_saved=False, _saved_id=None):
+                 only_title_abstract=False, show_progress=False,
+                 _used_saved=False, _saved_id=None):
         """
         Find the topics in the provided 'corpus' using 'doc_model' to get the
         embedding of the Documents and Words in the CORD-19 corpus selected.
@@ -39,6 +40,9 @@ class TopicModel:
             corpus: A Cord-19 Corpus class with a selection of papers.
             doc_model: A Document Model class used to get the embeddings of the
                 words and documents in the corpus.
+            only_title_abstract: A Bool showing if we are going to use only the
+                Titles & Abstracts of the papers, or all their content to create
+                the vocabulary and the embeddings.
             show_progress: Bool representing whether we show the progress of
                 the function or not.
             _used_saved: A Bool to know if we need to load the Topic Model from
@@ -50,6 +54,8 @@ class TopicModel:
         self.corpus_ids = self.corpus.papers_cord_uids()
         self.doc_model = doc_model
         self.model_type = self.doc_model.model_type()
+        # Save if we are only using the Title and Abstract of the Papers.
+        self.use_title_abstract = only_title_abstract
 
         # Check we are using a supported model.
         if self.model_type not in self.supported_doc_models:
@@ -108,8 +114,8 @@ class TopicModel:
         """
         Make a list with the top words per topics.
 
-        Returns: A list of top_words_topic(), that return a list of the top words
-            per topic.
+        Returns: A list of tuples with the Topic ID and their top_words_topic(),
+            the latter containing the top words for the corresponding topic.
         """
         topics_top_words = []
         for topic_id, _ in self.top_topics():
@@ -133,10 +139,16 @@ class TopicModel:
         count = 0
         total = len(self.corpus_ids)
 
-        # Go through the tokens of all the documents in the Corpus' Sample.
+        # Check if we are only using Title & Abstract or the whole papers' content.
+        if self.use_title_abstract:
+            content_provider = self.corpus.all_papers_title_abstract()
+        else:
+            content_provider = self.corpus.all_papers_content()
+
+        # Create the vocabulary using the tokens from the Corpus' Content.
         words_embeddings = {}
-        for document in self.corpus.all_papers_content():
-            doc_tokens = doc_tokenizer(document)
+        for doc_content in content_provider:
+            doc_tokens = doc_tokenizer(doc_content)
             # Add the new words from the document.
             for doc_word in doc_tokens:
                 if doc_word not in words_embeddings:
@@ -173,18 +185,18 @@ class TopicModel:
         docs_embeddings = {}
         for cord_uid in self.corpus_ids:
             # Depending on the model, select the content of the paper to encode.
-            if self.model_type in {'doc2vec', 'glove'}:
-                # No text size or token count restrictions, use all text.
-                doc_content = self.corpus.paper_content(cord_uid)
-                doc_embedding = self.doc_model.document_vector(doc_content)
-            elif self.model_type == 'bert':
+            if self.model_type == 'specter':
+                # With Specter, load the embedding from CORD-19 dataset.
+                doc_vector = self.corpus.paper_embedding(cord_uid)
+                doc_embedding = np.array(doc_vector)
+            elif self.use_title_abstract or self.model_type == 'bert':
                 # BERT has a length limit, use only title and abstract.
                 doc_content = self.corpus.paper_title_abstract(cord_uid)
                 doc_embedding = self.doc_model.document_vector(doc_content)
-            # With Specter, load the embedding from CORD-19 dataset.
-            elif self.model_type == 'specter':
-                doc_vector = self.corpus.paper_embedding(cord_uid)
-                doc_embedding = np.array(doc_vector)
+            elif self.model_type in {'doc2vec', 'glove'}:
+                # No text size or token count restrictions, use all text.
+                doc_content = self.corpus.paper_content(cord_uid)
+                doc_embedding = self.doc_model.document_vector(doc_content)
             else:
                 raise NameError(f"We don't support the Model<{self.model_type}> yet.")
 
@@ -359,29 +371,27 @@ if __name__ == '__main__':
     stopwatch = TimeKeeper()
 
     # Test TopicModel class.
-    test_size = 500
+    test_size = 10_000
     print(f"\nLoading Random Sample of {big_number(test_size)} documents...")
-    rand_sample = RandomSample('medium', test_size, show_progress=True)
+    rand_sample = RandomSample(paper_type='medium', sample_size=test_size,
+                               show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
     # Load Document Model.
-
     print("\nLoading Bert Model...")
     bert_name = 'paraphrase-MiniLM-L3-v2'
     my_model = BertCord19(model_name=bert_name, show_progress=True)
-
     # print("\nLoading Specter model...")
     # my_model = SpecterCord19()
-
     # print("\nLoading Doc2Vec model of the Cord-19 Dataset...")
     # my_model = Doc2VecCord19.load('cord19_dataset', show_progress=True)
-
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
     print("\nLoading Topic Model...")
-    topic_model = TopicModel(corpus=rand_sample, doc_model=my_model, show_progress=True)
+    topic_model = TopicModel(corpus=rand_sample, doc_model=my_model,
+                             only_title_abstract=True, show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
