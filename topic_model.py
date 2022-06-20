@@ -111,11 +111,12 @@ class TopicModel:
         Returns: A list of top_words_topic(), that return a list of the top words
             per topic.
         """
-        top_words = []
+        topics_top_words = []
         for topic_id, _ in self.top_topics():
-            top_words.append(self.top_words_topic(topic_id, num_words=num_words))
+            topic_top_words = self.top_words_topic(topic_id, num_words=num_words)
+            topics_top_words.append((topic_id, topic_top_words))
         # Per topic, a list with the words and their similarity to the topic.
-        return top_words
+        return topics_top_words
 
     def _create_word_embeddings(self, show_progress=False):
         """
@@ -395,7 +396,7 @@ if __name__ == '__main__':
     top_n = 15
     print(f"\nTop {top_n} words per topic:")
     words_per_topic = topic_model.all_topics_top_words(top_n)
-    for i, word_list in enumerate(words_per_topic):
+    for i, word_list in words_per_topic:
         print(f"\n----> Topic <{i}>:")
         for word_sim in word_list:
             print(word_sim)
