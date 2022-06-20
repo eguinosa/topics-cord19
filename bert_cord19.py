@@ -2,7 +2,6 @@
 
 from os import mkdir
 from os.path import isdir, join
-
 from sentence_transformers import SentenceTransformer, util
 
 from document_model import DocumentModel
@@ -127,8 +126,8 @@ class BertCord19(DocumentModel):
 
         Returns: A string with name of model the class is using.
         """
-        the_type = self.models_dict[self.model_name]
-        if 'bert' in the_type:
+        model_dict = self.models_dict[self.model_name]
+        if 'bert' in model_dict['type']:
             return 'bert'
         else:
             return 'glove'
@@ -167,6 +166,9 @@ def load_all_models():
     # Get The Name of the models
     supported_models = list(BertCord19.models_dict)
 
+    # Record the Runtime of the Program
+    new_stopwatch = TimeKeeper()
+
     for model_name in supported_models:
         print("\n-------------------------------------------------------")
         print(f"Loading Model <{model_name}>:")
@@ -174,7 +176,7 @@ def load_all_models():
         print("\nCreating Bert Model...")
         new_model = BertCord19(model_name=model_name, show_progress=True)
         print("Done.")
-        print(f"[{stopwatch.formatted_runtime()}]")
+        print(f"[{new_stopwatch.formatted_runtime()}]")
 
         print(f"\nThe Model Type: {new_model.model_type()}")
 
@@ -191,18 +193,18 @@ if __name__ == '__main__':
 
     print(f"\nThe Model Type: {my_model.model_type()}")
 
-    # print("\nTesting word similarities (To close use [q/quit]):")
-    # quit_words = {'q', 'quit'}
-    # while True:
-    #     word1 = input("\nType the first word: ")
-    #     if word1 in quit_words:
-    #         break
-    #     word2 = input("Type the second word: ")
-    #     if word2 in quit_words:
-    #         break
-    #     sim_words = util.cos_sim(my_model.word_vector(word1), my_model.word_vector(word2))[0][0]
-    #     print("The words similarity:")
-    #     print(sim_words)
+    print("\nTesting word similarities (To close use [q/quit]):")
+    quit_words = {'q', 'quit'}
+    while True:
+        word1 = input("\nType the first word: ")
+        if word1 in quit_words:
+            break
+        word2 = input("Type the second word: ")
+        if word2 in quit_words:
+            break
+        sim_words = util.cos_sim(my_model.word_vector(word1), my_model.word_vector(word2))[0][0]
+        print("The words similarity:")
+        print(sim_words)
 
     print("\nDone.")
     print(f"[{stopwatch.formatted_runtime()}]\n")
