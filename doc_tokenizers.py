@@ -108,15 +108,18 @@ def _is_covid_related(word: str):
     Returns:
         True, if the word is a Covid term.
     """
-    # Clean the word
+    # Clean the word.
     lower_word = word.lower()
     lower_word = lower_word.replace('_', '')
 
     # Check if it is a Covid Term.
     if lower_word in {'covid19', 'sarscov2'}:
         return True
-    else:
-        return False
+    # Check if contains something about covid-19.
+    if 'covid19' in lower_word:
+        return True
+    # None of the above.
+    return False
 
 
 def _is_numeric(word: str):
