@@ -265,7 +265,22 @@ if __name__ == '__main__':
     # Record the Runtime of the Program
     stopwatch = TimeKeeper()
 
-    # # Test the extraction of the content of the papers
+    # # -- Loading & Saving with ID a used Random Sample. --
+    # the_size = RandomSample.saved_sample_size()
+    # print(f"\nSaved sample size: {big_number(the_size)}\n")
+    #
+    # print(f"\nLoading Saved Sample of {big_number(the_size)} papers.")
+    # the_sample = RandomSample.load(show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+    #
+    # new_id = str(the_size) + '_docs'
+    # print(f"\nSaving the loaded Random Sample with ID <{new_id}>...")
+    # the_sample.save_sample(sample_id=new_id)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+
+    # # -- Test the extraction of the content of the papers --
     # # my_sample = RandomSample(paper_type='big', sample_size=5, show_progress=True)
     # my_sample = RandomSample.load(show_progress=True)
     #
@@ -280,7 +295,7 @@ if __name__ == '__main__':
     #     if user_input in {'q', 'quit', 'exit'}:
     #         break
 
-    # Test the class.
+    # -- Test the class. --
     test_size = 1_000
     print(f"\nCreating a Random Sample of {big_number(test_size)} documents...")
     sample = RandomSample('medium', test_size, show_progress=True)
