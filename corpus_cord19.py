@@ -88,11 +88,34 @@ class CorpusCord19(ABC):
         abstract_text = self.paper_abstract(cord_uid)
         # Check the Title and Abstract is not empty.
         if title_text:
-            title_abstract_text += '<<--Title-->>\n' + title_text
+            title_abstract_text += title_text
         if abstract_text:
-            title_abstract_text += '\n\n<<--Abstract-->>\n' + abstract_text
+            title_abstract_text += '\n\n' + abstract_text
         # Text with formatted Title & Abstract.
         return title_abstract_text
+
+    def formatted_title_abstract(self, cord_uid):
+        """
+        Get the Title & Abstract of a paper formatted tags, to indicate were
+        each section of the paper starts.
+
+        Args:
+            cord_uid: A string with the identifier of the paper.
+
+        Returns:
+            A string containing the formatted title and abstract of the paper.
+        """
+        # Create default text & Load Title and Abstract.
+        title_abstract_formatted = ''
+        title_text = self.paper_title(cord_uid)
+        abstract_text = self.paper_abstract(cord_uid)
+        # Check the Title and Abstract is not empty.
+        if title_text:
+            title_abstract_formatted += '<<--Title-->>\n' + title_text
+        if abstract_text:
+            title_abstract_formatted += '\n\n<<--Abstract-->>\n' + abstract_text
+        # Text with formatted Title & Abstract.
+        return title_abstract_formatted
 
     def paper_content(self, cord_uid):
         """
@@ -113,9 +136,34 @@ class CorpusCord19(ABC):
         if formatted_title_abstract:
             full_text += formatted_title_abstract
         if content_body_text:
-            full_text += '\n\n<<--Body Text-->>\n' + content_body_text
+            full_text += '\n\n' + content_body_text
         # The Content of the Paper (formatted)
         return full_text
+
+    def formatted_paper_content(self, cord_uid):
+        """
+        Get the full content of a paper formatted with tags to indicate were
+        each section of the paper starts.
+
+        Args:
+            cord_uid: A string with the identifier of the paper.
+
+        Returns:
+            A string containing the formatted title, abstract and body text of
+                the paper.
+        """
+        # Use paper_title_abstract() & paper_body_text()
+        formatted_text = ''
+        formatted_title_abstract = self.formatted_title_abstract(cord_uid)
+        content_body_text = self.paper_body_text(cord_uid)
+
+        # Check we are not using empty content.
+        if formatted_title_abstract:
+            formatted_text += formatted_title_abstract
+        if content_body_text:
+            formatted_text += '\n\n<<--Body Text-->>\n' + content_body_text
+        # The Content of the Paper (formatted)
+        return formatted_text
 
     def all_papers_title_abstract(self):
         """
@@ -126,6 +174,16 @@ class CorpusCord19(ABC):
         """
         for cord_uid in self.papers_cord_uids():
             yield self.paper_title_abstract(cord_uid)
+
+    def all_formatted_title_abstract(self):
+        """
+        Create an iterator of strings containing the formatted title and abstract
+        of all the papers in the current corpus.
+
+        Returns: An iterator of strings.
+        """
+        for cord_uid in self.papers_cord_uids():
+            yield self.formatted_title_abstract(cord_uid)
 
     def all_papers_body_text(self):
         """
@@ -146,6 +204,16 @@ class CorpusCord19(ABC):
         """
         for cord_uid in self.papers_cord_uids():
             yield self.paper_content(cord_uid)
+
+    def all_formatted_papers_content(self):
+        """
+        Create an iterator containing the content of all the papers in the
+        current CORD-19 corpus.
+
+        Returns: An iterator of strings.
+        """
+        for cord_uid in self.papers_cord_uids():
+            yield self.formatted_paper_content(cord_uid)
 
     def all_papers_embeddings(self):
         """
