@@ -70,8 +70,13 @@ class TopicModel:
         self.doc_embeds = self._create_docs_embeddings(show_progress=show_progress)
         if show_progress:
             print("Finding Topics...")
-        self.topic_embeds = self._find_topics(show_progress=show_progress)
+        # Don't Show Progress - Multithreading in UMAP messes it up.
+        self.topic_embeds = self._find_topics(show_progress=False)
+        if show_progress:
+            print("Organizing documents by topics...")
         self.topic_docs = self._find_doc_topics(show_progress=show_progress)
+        if show_progress:
+            print("Creating topics vocabulary...")
         self.topic_words = self._find_word_topics(show_progress=show_progress)
         self.num_topics = len(self.topic_embeds)
 
@@ -83,14 +88,17 @@ class TopicModel:
         Returns:
             A list of tuples with the topics' ID and their document count.
         """
+        # Form list of topics with their size.
         topic_docs = [(topic_id, len(docs_list))
                       for topic_id, docs_list in self.topic_docs.items()]
+        # Sort by size.
         topic_docs.sort(key=lambda count: count[1], reverse=True)
         return topic_docs
 
     def top_words_topic(self, topic_id, num_words=10):
         """
-        Find the top n words for the given topic.
+        Find the top n words for the given topic. If 'num_words' is -1, then
+        return all the words belonging to this topic.
 
         Args:
             topic_id: The topic from which we want the top words.
@@ -103,16 +111,22 @@ class TopicModel:
         if topic_id not in self.topic_words:
             raise NameError("Topic not found.")
 
-        # Check we are not giving more words than what we can.
-        word_count = min(num_words, len(self.topic_words[topic_id]))
-
-        # The list of tuples with words and similarities.
-        result = self.topic_words[topic_id][:word_count]
+        # Get the list of words we are returning.
+        if num_words == -1:
+            # All words in the topic.
+            result = self.topic_words[topic_id]
+        else:
+            # Check we are not giving more words than what we can.
+            word_count = min(num_words, len(self.topic_words[topic_id]))
+            # Get the number of words requested.
+            result = self.topic_words[topic_id][:word_count]
+        # List of tuples with words and similarities.
         return result
 
     def all_topics_top_words(self, num_words=10):
         """
-        Make a list with the top words per topics.
+        Make a list with the top words per topics. If 'num_words' is -1, returns
+        all the words belonging to a topic.
 
         Returns: A list of tuples with the Topic ID and their top_words_topic(),
             the latter containing the top words for the corresponding topic.
@@ -283,6 +297,10 @@ class TopicModel:
         """
         Create a dictionary assigning each document to their closest topic.
 
+        Args:
+            show_progress: A Bool representing whether we show the progress of
+                the function or not.
+
         Returns: A dictionary with the topic ID as key, and the list of documents
             belonging to the topics as value.
         """
@@ -311,6 +329,16 @@ class TopicModel:
         return topic_documents
 
     def _find_word_topics(self, show_progress=False):
+        """
+        Assign each word in the vocabulary to its closest topic.
+
+        Args:
+            show_progress: A Bool representing whether we show the progress of
+                the function or not.
+
+        Returns: A dictionary containing the topic IDs as keys, and th elist of
+            words belonging to the topic as values.
+        """
         # Progress Variables
         count = 0
         total = len(self.word_embeds)
@@ -371,10 +399,11 @@ if __name__ == '__main__':
     stopwatch = TimeKeeper()
 
     # Test TopicModel class.
-    test_size = 10_000
+    test_size = 500
     print(f"\nLoading Random Sample of {big_number(test_size)} documents...")
     rand_sample = RandomSample(paper_type='medium', sample_size=test_size,
                                show_progress=True)
+    # rand_sample = RandomSample.load(show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
