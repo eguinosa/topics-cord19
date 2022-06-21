@@ -3,7 +3,7 @@
 from unidecode import unidecode
 
 
-def doc_tokenizer(doc: str, min_len=3, max_len=15):
+def doc_tokenizer(doc: str, min_len=3, max_len=20):
     """
     Tokenize the Documents from the CORD-19 corpus.
     - Lowercase tokens.
@@ -100,7 +100,8 @@ def _is_alpha_underscore(word: str):
 
 def _is_covid_related(word: str):
     """
-    Check if the 'word' is a common COVID-19 term like covid_19, sars_cov_2.
+    Check if the 'word' is a common COVID-19 term like covid_19, sars_cov_2, or
+    contains one of these terms inside.
 
     Args:
         word: A string with the word we want to check.
@@ -108,14 +109,19 @@ def _is_covid_related(word: str):
     Returns:
         True, if the word is a Covid term.
     """
+    # Check first is the word is alphanumeric.
+    if not _is_alpha_numeric(word):
+        return False
+
     # Clean the word.
     lower_word = word.lower()
     lower_word = lower_word.replace('_', '')
+    lower_word = lower_word.replace('.', '')
 
     # Check if it is a Covid Term.
     if lower_word in {'covid19', 'sarscov2'}:
         return True
-    # Check if contains something about covid-19.
+    # Check if it contains something about covid-19.
     if 'covid19' in lower_word:
         return True
     # None of the above.
