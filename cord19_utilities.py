@@ -2,7 +2,7 @@
 
 import json
 from os import mkdir
-from os.path import isdir, join
+from os.path import isdir, isfile, join
 
 from corpus_cord19 import CorpusCord19
 from papers import Papers
@@ -142,18 +142,52 @@ def save_corpus_vocabulary(corpus: CorpusCord19 = None, file_name: str = None,
         json.dump(vocab_words, f)
 
 
+def load_corpus_vocabulary(vocab_file_name: str = None):
+    """
+    Load a saved corpus vocabulary. If no vocabulary filename is provided, loads
+    the vocabulary from the default archive.
+
+    Args:
+        vocab_file_name: String with the filename were the vocabulary is
+            stored.
+    Returns:
+        List[str] containing the saved vocabulary.
+    """
+    # Check the data folders exist.
+    if not isdir(data_folder):
+        raise FileNotFoundError("The is no data folder available to load file.")
+    vocab_folder_path = join(data_folder, vocabulary_folder)
+    if not isdir(vocab_folder_path):
+        raise FileNotFoundError("There is no vocabulary folder available.")
+
+    # Check if a filename was provided.
+    if vocab_file_name:
+        vocab_file_path = join(vocab_folder_path, vocab_file_name)
+    else:
+        vocab_file_path = join(vocab_folder_path, vocab_default_file)
+    # Check if file exists.
+    if not isfile(vocab_file_path):
+        raise FileNotFoundError(f"There is no vocabulary file available.")
+
+    # Load the file.
+    with open(vocab_file_path, 'r') as f:
+        corpus_vocab = json.load(f)
+    # List of words with the corpus vocabulary.
+    return corpus_vocab
+
+
 if __name__ == '__main__':
     # Track Program Runtime.
     stopwatch = TimeKeeper()
 
-    # Load Test Random Sample.
-    doc_count = 30
-    print(f"\nCreating Random Sample of {doc_count} medium documents.")
-    my_sample = RandomSample(paper_type='medium', sample_size=doc_count,
-                             show_progress=True)
-    # my_sample = RandomSample.load()
-    print("Done.")
-    print(f"[{stopwatch.formatted_runtime()}]")
+    # # Load Test Random Sample.
+    # doc_count = 30
+    # print(f"\nCreating Random Sample of {doc_count} medium documents.")
+    # my_sample = RandomSample(paper_type='medium', sample_size=doc_count,
+    #                          show_progress=True)
+    # # my_sample = RandomSample.load()
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
 
     # # Test save_titles_abstracts():
     # print("\nSaving Documents Titles and Abstracts to files...")
@@ -161,15 +195,28 @@ if __name__ == '__main__':
     # print("Done.")
     # print(f"[{stopwatch.formatted_runtime()}]")
 
-    # Test save_corpus_vocabulary():
-    print(f"\nSaving the Vocabulary of {doc_count} documents...")
-    vocab_id = 'corpus_' + str(doc_count)
-    save_corpus_vocabulary(corpus=my_sample, file_name=vocab_id,
-                           use_title_abstract=False, show_progress=True)
-    print("Done.")
-    print(f"[{stopwatch.formatted_runtime()}]")
+    # # Vocabulary filename.
+    # vocab_id = 'corpus_' + str(doc_count)
+    #
+    # # Test save_corpus_vocabulary():
+    # print(f"\nSaving the Vocabulary of {doc_count} documents...")
+    # save_corpus_vocabulary(corpus=my_sample, file_name=vocab_id,
+    #                        use_title_abstract=False, show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
 
+    # # Test load_corpus_vocabulary():
+    # print(f"\nLoading the saved vocabulary...")
+    # the_vocabulary = load_corpus_vocabulary(vocab_id)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+    #
+    # print("The vocabulary:")
+    # print(the_vocabulary)
+
+    # # -----------------------------------------------------------
     # # Save the Title & Abstract of all the papers in the CORD-19.
+    # # -----------------------------------------------------------
     # print("\nLoading the CORD-19 Dataset...")
     # corpus_papers = Papers()
     # print("Done.")
@@ -179,3 +226,25 @@ if __name__ == '__main__':
     # save_titles_abstracts(corpus=corpus_papers, show_progress=True)
     # print("Done.")
     # print(f"[{stopwatch.formatted_runtime()}]")
+
+    # # -----------------------------------------------------------
+    # # Save the vocabulary of the CORD-19 dataset.
+    # # -----------------------------------------------------------
+    print("\nLoading CORD-19 dataset...")
+    corpus_papers = Papers(show_progress=True)
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
+    
+    # Title & Abstract Vocabulary.
+    print(f"\nSaving the vocabulary of titles & abstracts in CORD-19...")
+    save_corpus_vocabulary(corpus=corpus_papers, file_name=vocab_titles_abstracts,
+                           use_title_abstract=True, show_progress=True)
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
+
+    # All Content Vocabulary.
+    print(f"\nSave the vocabulary for all the content in the papers of CORD-19...")
+    save_corpus_vocabulary(corpus=corpus_papers, file_name=vocab_all_content,
+                           use_title_abstract=False, show_progress=True)
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
