@@ -26,16 +26,22 @@ class Doc2VecCord19(DocumentModel):
     word2vec_model_file = 'word2vec_model'
     word2vec_model_prefix = 'word2vec_model_'
 
-    def __init__(self, corpus: CorpusCord19, vector_dims=100, show_progress=False,
+    def __init__(self, corpus: CorpusCord19 = None, vector_dims=100,
+                 use_title_abstract=False, show_progress=False,
                  _use_saved=False, _saved_id=None):
         """
-        Create a Doc2Vec and Word2Vec model using the CORD-19 dataset.
+        Create a Doc2Vec and Word2Vec model using the CORD-19 dataset. If no
+        corpus is provided, use the Papers() class containing all the papers in
+        the CORD-19 dataset.
 
         Args:
             corpus: The Cord19 Corpus we are going to use to create the Doc2Vec
                 model.
             vector_dims: The dimensions for the embeddings of the documents and
                 words in the corpus.
+            use_title_abstract: Bool indicating whether we are using the title
+                and abstract or the full content of the documents to create the
+                Doc2Vec model.
             show_progress: A Bool representing whether we show the progress of
                 the function or not.
             _use_saved: A Bool indicating if we are loading the sample from a
@@ -66,12 +72,21 @@ class Doc2VecCord19(DocumentModel):
             self.doc2vec_model = doc2vec.Doc2Vec.load(doc2vec_model_path)
             self.word2vec_model = self.doc2vec_model.wv
         else:
-            # Get the CORD-19 documents.
-            self.corpus = corpus
+            # Check if we have a corpus and get the CORD-19 documents.
+            if corpus:
+                self.corpus = corpus
+            else:
+                if show_progress:
+                    print("Creating default CORD-19 corpus...")
+                self.corpus = Papers(show_progress=show_progress)
 
             # Create an Iterable with the documents tagged.
-            train_corpus = IterableTokenizer(self.corpus.all_papers_content,
-                                             tagged_tokens=True)
+            if use_title_abstract:
+                train_corpus = IterableTokenizer(self.corpus.all_papers_title_abstract,
+                                                 tagged_tokens=True)
+            else:
+                train_corpus = IterableTokenizer(self.corpus.all_papers_content,
+                                                 tagged_tokens=True)
 
             # Create and Build the Model.
             if show_progress:
@@ -112,7 +127,7 @@ class Doc2VecCord19(DocumentModel):
             word: a string of one token.
 
         Returns:
-            The vector of the word.
+            Numpy.ndarray with the vector of the word.
         """
         # Check if the word exists in the dictionary of the model.
         if word not in self.word2vec_model:
@@ -129,7 +144,7 @@ class Doc2VecCord19(DocumentModel):
             doc_text: A string containing the text of the document.
 
         Returns:
-            The vector of the document.
+            Numpy.ndarray with the vector of the document.
         """
         # Tokenize the document text.
         doc_tokens = doc_tokenizer(doc_text)
@@ -222,8 +237,9 @@ if __name__ == '__main__':
 
     # Create Doc2Vec model.
     print("\nCreating Doc2Vec model...")
-    doc_model = Doc2VecCord19(corpus=model_corpus, vector_dims=300,
-                              show_progress=True)
+    # doc_model = Doc2VecCord19(corpus=model_corpus, vector_dims=300,
+    #                           use_title_abstract=True, show_progress=True)
+    doc_model = Doc2VecCord19.load(show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
@@ -249,7 +265,9 @@ if __name__ == '__main__':
         if not input_word or input_word in {'q', 'quit'}:
             break
         print(f"Word vector of {input_word}:")
-        print(doc_model.word_vector(input_word))
+        the_word_vector = doc_model.word_vector(input_word)
+        print(the_word_vector)
+        print(f"Type: {type(the_word_vector)}")
 
     # print("\nTesting loading Doc2Vec model...")
     # print("Loading model...")
