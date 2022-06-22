@@ -21,9 +21,9 @@ class Doc2VecCord19(DocumentModel):
     # Class Data Locations.
     data_folder = 'project_data'
     model_folder = 'doc2vec_models'
-    doc2vec_model_file = 'doc2vec_cord19_model'
-    doc2vec_model_prefix = 'doc2vec_cord19_model_'
-    word2vec_model_file = 'word2vec_model'
+    doc2vec_model_file = 'doc2vec_model_default'
+    doc2vec_model_prefix = 'doc2vec_model_'
+    word2vec_model_file = 'word2vec_model_default'
     word2vec_model_prefix = 'word2vec_model_'
 
     def __init__(self, corpus: CorpusCord19 = None, vector_dims=100,
@@ -124,7 +124,7 @@ class Doc2VecCord19(DocumentModel):
         Transform a word into a vector.
 
         Args:
-            word: a string of one token.
+            word: String of the token word.
 
         Returns:
             Numpy.ndarray with the vector of the word.
@@ -141,7 +141,7 @@ class Doc2VecCord19(DocumentModel):
         Transform the text of a document into a vector.
 
         Args:
-            doc_text: A string containing the text of the document.
+            doc_text: String containing the text of the document.
 
         Returns:
             Numpy.ndarray with the vector of the document.
@@ -231,15 +231,15 @@ if __name__ == '__main__':
     # Test the class.
     test_size = 500
     print(f"\nLoading Random Sample of {big_number(test_size)} documents...")
-    model_corpus = RandomSample('medium', test_size, show_progress=True)
+    model_corpus = RandomSample(paper_type='medium', sample_size=test_size, show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
     # Create Doc2Vec model.
     print("\nCreating Doc2Vec model...")
-    # doc_model = Doc2VecCord19(corpus=model_corpus, vector_dims=300,
-    #                           use_title_abstract=True, show_progress=True)
-    doc_model = Doc2VecCord19.load(show_progress=True)
+    doc_model = Doc2VecCord19(corpus=model_corpus, vector_dims=300,
+                              use_title_abstract=True, show_progress=True)
+    # doc_model = Doc2VecCord19.load(show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
@@ -289,31 +289,3 @@ if __name__ == '__main__':
 
     print("\nDone.")
     print(f"[{stopwatch.formatted_runtime()}]\n")
-
-    # **************************************************************
-    # <--- To Create Doc2Vec model of the entire CORD-19 corpus --->
-    # (Done - 9 hours for 138,967 documents)
-    # **************************************************************
-
-    # # Load Corpus.
-    # print(f"\nLoading CORD-19 corpus...")
-    # model_corpus = Papers(show_progress=True)
-    # print("Done.")
-    # print(f"[{stopwatch.formatted_runtime()}]")
-
-    # # Check the amount of documents loaded.
-    # num_papers = len(model_corpus.papers_index)
-    # print(f"\nThe current CORD-19 dataset has {big_number(num_papers)} documents.")
-
-    # # Create Doc2Vec model.
-    # print("\nCreating Doc2Vec model...")
-    # doc_model = Doc2VecCord19(corpus=model_corpus, vector_dims=300,
-    #                           show_progress=True)
-    # print("Done.")
-    # print(f"[{stopwatch.formatted_runtime()}]")
-
-    # # Save CORD-19 Corpus Word2Vec Model.
-    # print("\nSaving the Doc2Vec Model of the CORD-19 Dataset...")
-    # doc_model.save_model('cord19_dataset')
-    # print("Done.")
-    # print(f"[{stopwatch.formatted_runtime()}]")
