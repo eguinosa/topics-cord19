@@ -11,7 +11,7 @@ from specter_cord19 import SpecterCord19
 from doc_tokenizers import doc_tokenizer
 from random_sample import RandomSample
 from time_keeper import TimeKeeper
-from extra_funcs import progress_bar
+from extra_funcs import progress_bar, big_number
 
 
 # Function's Data Locations.
@@ -356,5 +356,37 @@ if __name__ == '__main__':
     # print(f"\nSave the vocabulary for all the content in the papers of CORD-19...")
     # save_corpus_vocabulary(corpus=corpus_papers, file_name=vocab_all_content,
     #                        use_title_abstract=False, show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+
+    # -----------------------------------------------------------
+    # Save embeddings for vocabulary of the CORD-19 dataset.
+    # -----------------------------------------------------------
+
+    # # Title & Abstract Vocabulary.
+    # print("\nLoading the vocabulary of titles & abstracts in CORD-19...")
+    # vocab_cord19 = load_corpus_vocabulary(vocab_file_name=vocab_titles_abstracts)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+
+    # print(f"\nVocabulary Size: {big_number(len(vocab_cord19))}")
+
+    # print("\nCreating and Saving embeddings for Title & Abstracts vocabulary...")
+    # save_vocab_embeddings(vocab_list=vocab_cord19, file_name=embeds_title_abstract,
+    #                       show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+
+    # # All Content Vocabulary.
+    # print("\nLoading the vocabulary of all content in CORD-19 docs...")
+    # vocab_cord19 = load_corpus_vocabulary(vocab_file_name=vocab_all_content)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+    
+    # print(f"\nVocabulary Size: {big_number(len(vocab_cord19))}")
+
+    # print("\nCreating and Saving embeddings for All Content vocabulary...")
+    # save_vocab_embeddings(vocab_list=vocab_cord19, file_name=embeds_all_content,
+    #                       show_progress=True)
     # print("Done.")
     # print(f"[{stopwatch.formatted_runtime()}]")
