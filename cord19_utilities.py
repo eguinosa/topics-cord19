@@ -5,20 +5,29 @@ from os import mkdir
 from os.path import isdir, isfile, join
 
 from corpus_cord19 import CorpusCord19
+from document_model import DocumentModel
 from papers import Papers
+from specter_cord19 import SpecterCord19
 from doc_tokenizers import doc_tokenizer
 from random_sample import RandomSample
 from time_keeper import TimeKeeper
 from extra_funcs import progress_bar
 
+
 # Function's Data Locations.
 data_folder = 'project_data'
 folder_titles_abstracts = 'cord19_titles_abstracts'
+
 # Creating & Saving Vocabulary Locations.
 vocabulary_folder = 'vocabulary_files'
 vocab_default_file = 'vocabulary_temp.json'
 vocab_titles_abstracts = 'vocabulary_titles_abstracts.json'
 vocab_all_content = 'vocabulary_all_content.json'
+
+# Vocabulary Embeddings Locations.
+embeds_default_file = 'embeddings_vocabulary_temp.json'
+embeds_title_abstract = 'embeddings_titles_abstracts.json'
+embeds_all_content = 'embeddings_all_content.json'
 
 
 def save_titles_abstracts(folder_name: str = None, corpus: CorpusCord19 = None,
@@ -176,43 +185,144 @@ def load_corpus_vocabulary(vocab_file_name: str = None):
     return corpus_vocab
 
 
+def save_vocab_embeddings(vocab_list, model: DocumentModel = None,
+                          file_name: str = None, show_progress=False):
+    """
+    Create and save dictionary containing the embeddings of all the words
+    contained in the vocabulary 'vocab_list'.
+
+    By default, if not Document Model is provided uses the Specter Model. If no
+    filename is provided, uses a default filename.
+
+    Saves a Dictionary with the String of the words as keys, and a List[float]
+    with their embeddings as values.
+
+    Args:
+        vocab_list: List of strings containing the words in the vocabulary.
+        model: DocumentModel class used to create the embeddings of the words.
+        file_name: String with the filename were we will store the embeddings of
+            the vocabulary.
+        show_progress: Bool representing whether we show the progress of
+                the function or not.
+    """
+    # Use the Specter Document Model by default.
+    if not model:
+        model = SpecterCord19()
+
+    # Progress Variables.
+    count = 0
+    total = len(vocab_list)
+    # Create the dictionary containing the embeddings.
+    embeds_vocab = {}
+    for vocab_word in vocab_list:
+        # Get Numpy Embedding and transform it into a List[float].
+        word_embed = model.word_vector(vocab_word)
+        embed_list = word_embed.tolist()
+        embeds_vocab[vocab_word] = embed_list
+
+        # Show Progress.
+        if show_progress:
+            count += 1
+            progress_bar(count, total)
+
+    # Check if we need to create data folders.
+    if not isdir(data_folder):
+        mkdir(data_folder)
+    vocab_folder_path = join(data_folder, vocabulary_folder)
+    if not isdir(vocab_folder_path):
+        mkdir(vocab_folder_path)
+    # Create path for embeddings dict.
+    if file_name:
+        embeds_dict_path = join(vocab_folder_path, file_name)
+    else:
+        embeds_dict_path = join(vocab_folder_path, embeds_default_file)
+
+    # Save dictionary using json.
+    with open(embeds_dict_path, 'w') as f:
+        json.dump(embeds_vocab, f)
+
+
+def load_vocab_embeddings(dict_filename: str = None):
+    """
+    Load a saved dictionary containing the embeddings of the words belonging to
+    a vocabulary.
+
+    Args:
+        dict_filename: The filename of the file were the dictionary is stored.
+
+    Returns: Dictionary with the String of the words as keys, and a List[float]
+        with their embeddings as values.
+    """
+    # Check the data folders exist.
+    if not isdir(data_folder):
+        raise FileNotFoundError("The is no data folder available to load file.")
+    vocab_folder_path = join(data_folder, vocabulary_folder)
+    if not isdir(vocab_folder_path):
+        raise FileNotFoundError("There is no vocabulary folder available.")
+
+    # Check if filename was provided.
+    if dict_filename:
+        embeds_dict_path = join(vocab_folder_path, dict_filename)
+    else:
+        embeds_dict_path = join(vocab_folder_path, embeds_default_file)
+    # Check if the file exists.
+    if not isfile(embeds_dict_path):
+        raise FileNotFoundError("There is no dictionary with embeddings available.")
+
+    # Load dictionary.
+    with open(embeds_dict_path, 'r') as f:
+        embedding_vocab = json.load(f)
+    return embedding_vocab
+
+
 if __name__ == '__main__':
     # Track Program Runtime.
     stopwatch = TimeKeeper()
 
     # Load Test Random Sample.
-    doc_count = 30
+    doc_count = 5
     print(f"\nCreating Random Sample of {doc_count} medium documents.")
-    my_sample = RandomSample(paper_type='medium', sample_size=doc_count,
-                             show_progress=True)
-    # my_sample = RandomSample.load()
+    # my_sample = RandomSample(paper_type='medium', sample_size=doc_count, show_progress=True)
+    my_sample = RandomSample.load()
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
+
+    # Test save_corpus_vocabulary():
+    print(f"\nSaving the Vocabulary of {doc_count} documents...")
+    save_corpus_vocabulary(corpus=my_sample, use_title_abstract=False, show_progress=True)
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
+
+    # Test load_corpus_vocabulary():
+    print(f"\nLoading the saved vocabulary...")
+    the_vocabulary = load_corpus_vocabulary()
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
+
+    print("The vocabulary:")
+    print(the_vocabulary)
+
+    # Test creating and saving vocabulary embeddings.
+    print("\nCreating & Saving embeddings for the vocabulary...")
+    save_vocab_embeddings(the_vocabulary, show_progress=True)
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
+
+    # Test loading embeddings' dictionary.
+    print("\nLoading embeddings' dictionary...")
+    the_embed_dict = load_vocab_embeddings()
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
+
+    vocab_word = the_vocabulary[5]
+    print(f"\nThe embedding of the word <{vocab_word}>:")
+    print(the_embed_dict[vocab_word])
 
     # # Test save_titles_abstracts():
     # print("\nSaving Documents Titles and Abstracts to files...")
     # save_titles_abstracts(corpus=my_sample, show_progress=True)
     # print("Done.")
     # print(f"[{stopwatch.formatted_runtime()}]")
-
-    # # Vocabulary filename.
-    # vocab_id = 'corpus_' + str(doc_count)
-    #
-    # # Test save_corpus_vocabulary():
-    # print(f"\nSaving the Vocabulary of {doc_count} documents...")
-    # save_corpus_vocabulary(corpus=my_sample, file_name=vocab_id,
-    #                        use_title_abstract=False, show_progress=True)
-    # print("Done.")
-    # print(f"[{stopwatch.formatted_runtime()}]")
-
-    # # Test load_corpus_vocabulary():
-    # print(f"\nLoading the saved vocabulary...")
-    # the_vocabulary = load_corpus_vocabulary(vocab_id)
-    # print("Done.")
-    # print(f"[{stopwatch.formatted_runtime()}]")
-    #
-    # print("The vocabulary:")
-    # print(the_vocabulary)
 
     # # -----------------------------------------------------------
     # # Save the Title & Abstract of all the papers in the CORD-19.
