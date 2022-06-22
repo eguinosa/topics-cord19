@@ -4,7 +4,6 @@ import logging
 
 from papers import Papers
 from doc2vec_cord19 import Doc2VecCord19
-from random_sample import RandomSample
 from time_keeper import TimeKeeper
 from extra_funcs import big_number
 
@@ -18,8 +17,7 @@ if __name__ == '__main__':
 
     # Load Corpus.
     print(f"\nLoading CORD-19 corpus...")
-    # corpus_cord19 = Papers(show_progress=True)
-    corpus_cord19 = RandomSample(paper_type='medium', sample_size=500, show_progress=True)
+    corpus_cord19 = Papers(show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
@@ -35,7 +33,7 @@ if __name__ == '__main__':
     # # Create Doc2Vec model.
     # print("\nCreating Doc2Vec model using all content...")
     # doc_model = Doc2VecCord19(corpus=corpus_cord19, vector_dims=300,
-    #                           show_progress=True)
+    #                           use_title_abstract=False, show_progress=True)
     # print("Done.")
     # print(f"[{stopwatch.formatted_runtime()}]")
     #
@@ -45,19 +43,20 @@ if __name__ == '__main__':
     # print("Done.")
     # print(f"[{stopwatch.formatted_runtime()}]")
 
-    # ********************************************************************
-    # <--- Create Doc2Vec model using Titles & Abstracts of CORD-19 --->
-    # ********************************************************************
-
-    # Create Doc2Vec model.
-    print("\nCreating Doc2Vec model using Titles & Abstracts...")
-    doc_model = Doc2VecCord19(corpus=corpus_cord19, vector_dims=300,
-                              use_title_abstract=True, show_progress=True)
-    print("Done.")
-    print(f"[{stopwatch.formatted_runtime()}]")
-
-    # Save CORD-19 Corpus Word2Vec Model.
-    print("\nSaving the Doc2Vec Model of the CORD-19 Dataset...")
-    doc_model.save_model('all_cord19_title_abstract')
-    print("Done.")
-    print(f"[{stopwatch.formatted_runtime()}]")
+    # # ********************************************************************
+    # # <--- Create Doc2Vec model using Titles & Abstracts of CORD-19 --->
+    # # (Done - Papers' Title & Abstract - 35 min for 138,967 documents)
+    # # ********************************************************************
+    #
+    # # Create Doc2Vec model.
+    # print("\nCreating Doc2Vec model using Titles & Abstracts...")
+    # doc_model = Doc2VecCord19(corpus=corpus_cord19, vector_dims=300,
+    #                           use_title_abstract=True, show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+    #
+    # # Save CORD-19 Corpus Word2Vec Model.
+    # print("\nSaving the Doc2Vec Model of the CORD-19 Dataset...")
+    # doc_model.save_model('all_cord19_title_abstract')
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
