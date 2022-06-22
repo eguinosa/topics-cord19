@@ -123,13 +123,13 @@ class SpecterCord19(DocumentModel):
 
         Returns:
             A Dictionary with the String of the words as keys, and a List[float]
-            with their embeddings as values.
+                with their embeddings as values.
         """
         # Progress variables.
         count = 0
         total = len(vocabulary)
 
-        # Dictionary containing the embeddings.
+        # Create dictionary containing the embeddings.
         vocab_embeds = {}
         for vocab_word in vocabulary:
             # Get numpy embedding and transform it to a List[float]
