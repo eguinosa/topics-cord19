@@ -19,9 +19,9 @@ class PapersAnalyzer:
     """
     # Class Data Locations
     data_folder = 'project_data'
-    small_papers_index = 'small_papers_index.json'
-    medium_papers_index = 'medium_papers_index.json'
-    big_papers_index = 'big_papers_index.json'
+    small_papers_index = 'papers_index_small.json'
+    medium_papers_index = 'papers_index_medium.json'
+    big_papers_index = 'papers_index_big.json'
 
     def __init__(self, force_scanning=False, show_progress=False):
         """
@@ -70,6 +70,8 @@ class PapersAnalyzer:
             if show_progress:
                 print("Classifying Papers by size...")
             indexes = self._organize_papers(show_progress=show_progress)
+            if show_progress:
+                print("Saving Papers classifications...")
             # Get the Papers Indexes.
             self.small_papers = indexes[0]
             self.medium_papers = indexes[1]
