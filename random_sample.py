@@ -2,6 +2,7 @@
 
 import json
 import random
+from os import mkdir
 from os.path import join, isdir, isfile
 
 from corpus_cord19 import CorpusCord19
@@ -17,7 +18,8 @@ class RandomSample(CorpusCord19):
     """
     # Class Data Locations
     data_folder = 'project_data'
-    sample_index_file = 'random_sample_index.json'
+    random_sample_folder = 'random_sample_files'
+    default_index_file = 'random_sample_index_default.json'
     sample_index_prefix = 'random_sample_index_'
 
     def __init__(self, paper_type='all', sample_size=-1, show_progress=False,
@@ -40,7 +42,14 @@ class RandomSample(CorpusCord19):
             show_progress: A Bool representing whether we show the progress of
                 the function or not.
         """
-        # Get the analyzed CORD-19 papers. (Creates data folder)
+        # Check the project folders exist.
+        if not isdir(self.data_folder):
+            mkdir(self.data_folder)
+        sample_folder_path = join(self.data_folder, self.random_sample_folder)
+        if not isdir(sample_folder_path):
+            mkdir(sample_folder_path)
+
+        # Get the analyzed CORD-19 papers.
         self.analyzed_papers = PapersAnalyzer(show_progress=show_progress)
         # Also save the unorganized Papers().
         self.cord19_papers = self.analyzed_papers.cord19_papers
@@ -51,10 +60,10 @@ class RandomSample(CorpusCord19):
             if _saved_id:
                 # Load a specific Sample, previously saved with an ID.
                 saved_sample_file = self.sample_index_prefix + _saved_id + '.json'
-                self.sample_index_path = join(self.data_folder, saved_sample_file)
+                self.sample_index_path = join(sample_folder_path, saved_sample_file)
             else:
                 # Load last used Sample.
-                self.sample_index_path = join(self.data_folder, self.sample_index_file)
+                self.sample_index_path = join(sample_folder_path, self.default_index_file)
             if not isfile(self.sample_index_path):
                 raise FileNotFoundError("No local RandomSample index file available.")
             # Load Sample Index.
@@ -71,7 +80,7 @@ class RandomSample(CorpusCord19):
                 print("Creating new Random Sample...")
                 progress_bar(1, 1)
             # Save the new Sample Index.
-            self.sample_index_path = join(self.data_folder, self.sample_index_file)
+            self.sample_index_path = join(sample_folder_path, self.default_index_file)
             with open(self.sample_index_path, 'w') as f:
                 json.dump(self.sample_cord_uids, f)
 
@@ -179,7 +188,8 @@ class RandomSample(CorpusCord19):
         """
         # Create Random Sample path.
         sample_index_file = self.sample_index_prefix + str(sample_id) + '.json'
-        sample_index_path = join(self.data_folder, sample_index_file)
+        sample_folder_path = join(self.data_folder, self.random_sample_folder)
+        sample_index_path = join(sample_folder_path, sample_index_file)
         # Save Sample Index in file.
         with open(sample_index_path, 'w') as f:
             json.dump(self.sample_cord_uids, f)
@@ -214,15 +224,24 @@ class RandomSample(CorpusCord19):
         Returns:
             A bool representing if we can load the sample or not.
         """
-        # Check if the sample index file exists.
+        # Check if the project folders exist.
+        if not isdir(cls.data_folder):
+            return False
+        sample_folder_path = join(cls.data_folder, cls.random_sample_folder)
+        if not isdir(sample_folder_path):
+            return False
+
+        # Get the sample index path.
         if sample_id:
             # Check sample previously saved with an ID.
             saved_sample_file = cls.sample_index_prefix + str(sample_id) + '.json'
-            sample_index_path = join(cls.data_folder, saved_sample_file)
+            sample_index_path = join(sample_folder_path, saved_sample_file)
         else:
             # Check last used Sample.
-            sample_index_path = join(cls.data_folder, cls.sample_index_file)
-        result = isdir(cls.data_folder) & isfile(sample_index_path)
+            sample_index_path = join(sample_folder_path, cls.default_index_file)
+
+        # Check if the index file exists.
+        result = isfile(sample_index_path)
         return result
 
     @classmethod
@@ -238,20 +257,19 @@ class RandomSample(CorpusCord19):
             A int with the number of papers available in the saved Sample. If no
                 sample is found, then returns -1.
         """
+        # Check if the Sample Index exist first.
+        if not cls.sample_saved(sample_id):
+            raise FileNotFoundError("There is no Random Sample available.")
+
         # Create Sample Path.
+        sample_folder_path = join(cls.data_folder, cls.random_sample_folder)
         if sample_id:
             # Check sample previously saved with an ID.
             saved_sample_file = cls.sample_index_prefix + str(sample_id) + '.json'
-            sample_index_path = join(cls.data_folder, saved_sample_file)
+            sample_index_path = join(sample_folder_path, saved_sample_file)
         else:
             # Check last used Sample.
-            sample_index_path = join(cls.data_folder, cls.sample_index_file)
-
-        # Check if the Sample index exists.
-        if not isdir(cls.data_folder):
-            return -1
-        if not isfile(sample_index_path):
-            return -1
+            sample_index_path = join(sample_folder_path, cls.default_index_file)
 
         # Check the size of the index.
         with open(sample_index_path, 'r') as f:
@@ -296,7 +314,7 @@ if __name__ == '__main__':
     #         break
 
     # -- Test the class. --
-    test_size = 1_000
+    test_size = 500
     print(f"\nCreating a Random Sample of {big_number(test_size)} documents...")
     sample = RandomSample('medium', test_size, show_progress=True)
     print("Done.")
@@ -309,13 +327,14 @@ if __name__ == '__main__':
         print(f"Document {count} - cord_uid: {doc_id}")
 
     print(f"\nSaving Random Sample and creating a New One...")
-    sample.save_sample('01')
+    save_id = 'test_01'
+    sample.save_sample(save_id)
     sample = RandomSample('medium', test_size)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
     print("\nLoading old Random Sample:...")
-    old_sample = RandomSample.load(sample_id='01')
+    old_sample = RandomSample.load(sample_id=save_id)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
