@@ -349,6 +349,10 @@ class Papers(CorpusCord19):
         Returns:
             A 768-dimensional document embedding.
         """
+        # Check if the 'cord_uid' is valid.
+        if cord_uid not in self.embeds_index:
+            raise NameError(f"The provided cord_uid <{cord_uid}> is not valid.")
+
         # Get the dictionary where the embedding is saved.
         embed_dict_filename = self.embeds_index[cord_uid]
         # Check if this dictionary is already in memory.
