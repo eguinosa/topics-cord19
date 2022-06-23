@@ -57,6 +57,6 @@ if __name__ == '__main__':
     #
     # # Save CORD-19 Corpus Word2Vec Model.
     # print("\nSaving the Doc2Vec Model of the CORD-19 Dataset...")
-    # doc_model.save_model('all_cord19_title_abstract')
+    # doc_model.save_model('cord19_title_abstract')
     # print("Done.")
     # print(f"[{stopwatch.formatted_runtime()}]")
