@@ -90,7 +90,7 @@ class Papers(CorpusCord19):
                 print("Creating index of the papers' embeddings...")
             # Save the embeddings of the papers and create an index of their
             # location.
-            self.embeds_index = self._create_embeddings_index(embed_dicts=1, show_progress=show_progress)
+            self.embeds_index = self._create_embeddings_index(embed_dicts=500, show_progress=show_progress)
             # Save the embeddings' index
             with open(embeds_index_path, 'w') as file:
                 json.dump(self.embeds_index, file)
