@@ -28,6 +28,7 @@ if __name__ == '__main__':
     # ********************************************************************
     # <--- Create Doc2Vec model using all content of  CORD-19 corpus --->
     # (Done - Papers' All Content - 9 hours for 138,967 documents)
+    # New Doc2Vec - [8 h : 7 min : 25 sec : 62 mill]
     # ********************************************************************
 
     # # Create Doc2Vec model.
