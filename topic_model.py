@@ -13,6 +13,8 @@ from papers import Papers
 from document_model import DocumentModel
 from random_sample import RandomSample
 from bert_cord19 import BertCord19
+from specter_manager import SpecterManager
+from doc2vec_cord19 import Doc2VecCord19
 from doc_tokenizers import doc_tokenizer
 from extra_funcs import progress_bar, big_number
 from time_keeper import TimeKeeper
@@ -182,6 +184,8 @@ class TopicModel:
             self.topic_embeds = self._find_topics(show_progress=show_progress)
             self.num_topics = len(self.topic_embeds)
             if show_progress:
+                print(f"{self.num_topics} topics found.")
+            if show_progress:
                 print("Organizing documents by topics...")
             self.topic_docs = self._find_doc_topics(show_progress=show_progress)
             if show_progress:
@@ -308,9 +312,11 @@ class TopicModel:
         for cord_uid in self.corpus_ids:
             # Depending on the model, select the content of the paper to encode.
             if self.model_type == 'specter':
-                # With Specter, load the embedding from CORD-19 dataset.
-                doc_vector = self.corpus.paper_embedding(cord_uid)
-                doc_embedding = np.array(doc_vector)
+                # Using the Specter Manager Now.
+                doc_embedding = self.doc_model.document_vector(cord_uid)
+                # # With Specter, load the embedding from CORD-19 dataset.
+                # doc_vector = self.corpus.paper_embedding(cord_uid)
+                # doc_embedding = np.array(doc_vector)
             elif self.use_title_abstract or self.model_type == 'bert':
                 # BERT has a length limit, use only title and abstract.
                 doc_content = self.corpus.paper_title_abstract(cord_uid)
@@ -608,28 +614,49 @@ if __name__ == '__main__':
     # Record the Runtime of the Program
     stopwatch = TimeKeeper()
 
-    # Test TopicModel class.
-    test_size = 500
+    # --Test TopicModel class--
+
+    # Load Random Sample to use a limited amount of papers in CORD-19.
+    test_size = 3_000
     print(f"\nLoading Random Sample of {big_number(test_size)} documents...")
-    rand_sample = RandomSample(paper_type='medium', sample_size=test_size,
-                               show_progress=True)
-    # rand_sample = RandomSample.load(show_progress=True)
+    sample = RandomSample(paper_type='medium', sample_size=test_size,
+                          show_progress=True)
+    # Load Last Used Sample.
+    # sample = RandomSample.load(show_progress=True)
+    # Load RandomSample() saved with an id.
+    # sample = RandomSample.load(sample_id='10000_docs', show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
-    # Load Document Model.
+    # # Use the entire CORD-19 Dataset
+    # print("\nLoading the CORD-19 Dataset...")
+    # sample = Papers(show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+
+    # Confirm amount of papers in the corpus.
+    papers_count = len(sample.papers_cord_uids())
+    print(f"\n{big_number(papers_count)} papers loaded.")
+
+    # Use BERT Document Model.
     print("\nLoading Bert Model...")
+    # bert_name = 'all-MiniLM-L12-v2'
     bert_name = 'paraphrase-MiniLM-L3-v2'
     my_model = BertCord19(model_name=bert_name, show_progress=True)
+
+    # Use Specter Document Model.
     # print("\nLoading Specter model...")
-    # my_model = SpecterCord19()
+    # my_model = SpecterManager(show_progress=True)
+
+    # Use Doc2Vec Model trained with Cord-19 papers.
     # print("\nLoading Doc2Vec model of the Cord-19 Dataset...")
     # my_model = Doc2VecCord19.load('cord19_dataset', show_progress=True)
+
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
     print("\nLoading Topic Model...")
-    topic_model = TopicModel(corpus=rand_sample, doc_model=my_model, only_title_abstract=True, show_progress=True)
+    topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True, show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
