@@ -1,0 +1,93 @@
+
+10,000 papers loaded.
+
+Loading Specter model...
+Loading Papers' embeddings...
+Loading index of the papers' texts...
+[========================================] 100%
+Loading index of papers' embeddings...
+[========================================] 100%
+Loading Vocabulary's embeddings...
+Done.
+[0 h : 0 min : 58 sec : 433 mill]
+
+Loading Topic Model...
+Creating Word Embeddings...
+[========================================] 100%
+Creating Document Embeddings...
+[========================================] 100%
+Finding Topics...
+UMAP: Reducing dimensions of the papers...
+HDBSCAN: Creating topic clusters with the documents...
+Creating the topic's embeddings...
+[========================================] 100%
+3 topics found.
+Organizing documents by topics...
+[========================================] 100%
+Creating topics vocabulary...
+[========================================] 100%
+Done.
+[0 h : 2 min : 20 sec : 906 mill]
+
+3 topics found.
+
+Topics and Document count:
+(2, 9681)
+(0, 280)
+(1, 39)
+
+Top 15 words per topic:
+
+----> Topic <2>:
+('nvri', 0.07834773014758167)
+('detention', 0.07720813078100766)
+('newness', 0.07716155496601959)
+('retentivity', 0.07674286347600717)
+('evansi', 0.07555624397404938)
+('offending', 0.07553765134646226)
+('charismatic', 0.07526392138333762)
+('investigacion', 0.07484248082021004)
+('reattach', 0.07476503781317342)
+('off_premise', 0.07464418774643283)
+('distention', 0.07386304925622035)
+('defending', 0.07359395246982868)
+('abortifacient', 0.07324764514399534)
+('nithi', 0.07324677166819268)
+('blame', 0.07311080299736777)
+
+----> Topic <0>:
+('hepatobiliary', 0.03143168369585148)
+('subphrenic', 0.027235726503887246)
+('extraperitoneal', 0.023851090239653826)
+('relaparotomy', 0.020214243256937308)
+('extraperitoneally', 0.019145297044195955)
+('postanesthesia', 0.016968217146635666)
+('diverticulotomy', 0.014159389436446315)
+('diverticuloscope', 0.013399069847231184)
+('heminephrectomies', 0.013033507982680596)
+('diverticulotomies', 0.012913025845100626)
+('relaparotomies', 0.011369674025975367)
+('choledocholithiasis', 0.01035138601397409)
+('retroperitoneoscopic', 0.010189219822171585)
+('hepaticojejunostomy', 0.009125379207097266)
+('nephrectomies', 0.008277447906550871)
+
+----> Topic <1>:
+('ecology', 0.11922309020141444)
+('captivity', 0.11576319568204582)
+('common', 0.11455520440993593)
+('subject', 0.11342067038823321)
+('cvats', 0.11270259643608113)
+('tropic', 0.1112124982459251)
+('sumc', 0.11103660889747102)
+('tropics', 0.11100893194839362)
+('ascc', 0.11059146785491637)
+('peculiar', 0.11025414072746498)
+('ccat', 0.11009899225073894)
+('calorie', 0.10949046141482861)
+('cvs', 0.10934202209413024)
+('ccugccc', 0.10909673959753032)
+('generalization', 0.10906973112545335)
+
+Done.
+[0 h : 2 min : 20 sec : 906 mill]

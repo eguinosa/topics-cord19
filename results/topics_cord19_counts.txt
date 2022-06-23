@@ -1,0 +1,6 @@
+
+Topics Found in the CORD19 dataset:
+
+--> Bert Fast: 941 topics found.
+--> Specter: 672 topics found.
+--> Doc2Vec: 611 topics found.

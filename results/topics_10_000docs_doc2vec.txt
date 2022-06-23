@@ -1,0 +1,70 @@
+
+10,000 papers loaded.
+
+Loading Doc2Vec model of the Cord-19 Dataset...
+Done.
+[0 h : 0 min : 8 sec : 13 mill]
+
+Loading Topic Model...
+Creating Word Embeddings...
+[========================================] 100%
+Creating Document Embeddings...
+[========================================] 100%
+Finding Topics...
+UMAP: Reducing dimensions of the papers...
+HDBSCAN: Creating topic clusters with the documents...
+Creating the topic's embeddings...
+[========================================] 100%
+2 topics found.
+Organizing documents by topics...
+[========================================] 100%
+Creating topics vocabulary...
+[========================================] 100%
+Done.
+[0 h : 3 min : 5 sec : 225 mill]
+
+2 topics found.
+
+Topics and Document count:
+(1, 9803)
+(0, 197)
+
+Top 15 words per topic:
+
+----> Topic <1>:
+('arabidoposis', 0.8477083444595337)
+('matanza_riachuelo', 0.8397996425628662)
+('caix_expression', 0.8282198309898376)
+('cervicomedullary', 0.8137015700340271)
+('opening_wedge', 0.8070266246795654)
+('thoraxinhoud', 0.8020175695419312)
+('ga_dotatate', 0.7892690300941467)
+('dianthi', 0.7779765129089355)
+('renoureteral', 0.7754726409912109)
+('melatonin_triggered', 0.7730656862258911)
+('compounds_direct', 0.7656469345092773)
+('eu_candidate', 0.7626944780349731)
+('chronic_ms', 0.7613427639007568)
+('adequada', 0.7593895792961121)
+('shiraz_iran', 0.75371915102005)
+
+----> Topic <0>:
+('pratosartan', 0.4992988705635071)
+('grpr', 0.4968351125717163)
+('psma_negative', 0.4886283874511719)
+('radioantagonists', 0.4861797094345093)
+('nis_mediated', 0.48168236017227173)
+('dspe_peg_dtpa_in', 0.47902119159698486)
+('gggc', 0.47833847999572754)
+('affibody', 0.47195518016815186)
+('radionuclide', 0.47140422463417053)
+('diethylenetriamine', 0.462174654006958)
+('pretargeted', 0.46209239959716797)
+('lu_dotatate', 0.4594705402851105)
+('in_cetuximab', 0.4499773681163788)
+('bombesin', 0.4476258158683777)
+('lysine_containing', 0.44578343629837036)
+
+Done.
+[0 h : 3 min : 5 sec : 225 mill]
+
