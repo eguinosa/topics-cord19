@@ -1,16 +1,18 @@
 # Gelin Eguinosa Rosique
 
+import json
+from os import mkdir
+from os.path import isdir, isfile, join
 import numpy as np
 import umap
 import hdbscan
 from sentence_transformers import util
 
 from corpus_cord19 import CorpusCord19
+from papers import Papers
 from document_model import DocumentModel
 from random_sample import RandomSample
 from bert_cord19 import BertCord19
-from specter_cord19 import SpecterCord19
-from doc2vec_cord19 import Doc2VecCord19
 from doc_tokenizers import doc_tokenizer
 from extra_funcs import progress_bar, big_number
 from time_keeper import TimeKeeper
@@ -22,19 +24,27 @@ class TopicModel:
     """
     # Class Data Locations.
     data_folder = 'project_data'
+    topic_models_folder = 'topic_models'
+    topic_model_prefix = 'topics_'  # + doc model + docs number + id
+    model_index_file = 'topic_model_index.json'
+    word_embeds_file = 'topic_model_word_embeds.json'
+    doc_embeds_file = 'topic_model_doc_embeds.json'
+    topic_embeds_file = 'topic_model_topic_embeds.json'
 
     # The Doc Models available to use.
     supported_doc_models = ['doc2vec', 'glove', 'bert', 'specter']
 
-    def __init__(self, corpus: CorpusCord19, doc_model: DocumentModel,
+    def __init__(self, corpus: CorpusCord19 = None, doc_model: DocumentModel = None,
                  only_title_abstract=False, show_progress=False,
-                 _used_saved=False, _saved_id=None):
+                 _used_saved=False, _model_id=None):
         """
         Find the topics in the provided 'corpus' using 'doc_model' to get the
         embedding of the Documents and Words in the CORD-19 corpus selected.
             - If '_used_saved' is True, loads a previously used and saved model
-            depending on the value of '_saved_id'.
-            - If no ID is provided in 'saved_id', loads the last used model.
+              depending on the value of '_saved_id'.
+            - If no ID is provided in 'saved_id', load the last used model.
+            - If no 'corpus' is provided, use Papers().
+            - If no 'doc_model' is provided, use BertCord19().
 
         Args:
             corpus: A Cord-19 Corpus class with a selection of papers.
@@ -47,38 +57,136 @@ class TopicModel:
                 the function or not.
             _used_saved: A Bool to know if we need to load the Topic Model from
                 a file or recalculate it.
-            _saved_id: A string with the ID of a previously saved Topic Model.
+            _model_id: A string with the ID of a previously saved Topic Model.
         """
-        # Save Corpus & Model.
-        self.corpus = corpus
-        self.corpus_ids = self.corpus.papers_cord_uids()
-        self.doc_model = doc_model
-        self.model_type = self.doc_model.model_type()
-        # Save if we are only using the Title and Abstract of the Papers.
-        self.use_title_abstract = only_title_abstract
+        if _used_saved:
+            # -- Load Topic Model ---
+            # Check if the data folders exist.
+            if not isdir(self.data_folder):
+                raise FileNotFoundError("There is no project data available.")
+            topic_models_path = join(self.data_folder, self.topic_models_folder)
+            if not isdir(topic_models_path):
+                raise FileNotFoundError("There is no Topic Model saved.")
 
-        # Check we are using a supported model.
-        if self.model_type not in self.supported_doc_models:
-            raise NameError(f"The model type <{self.model_type}> is not supported.")
+            # Create folder path for this topic model.
+            if _model_id:
+                model_folder_id = self.topic_model_prefix + _model_id
+            else:
+                model_folder_id = self.topic_model_prefix + 'default'
+            model_folder_path = join(topic_models_path, model_folder_id)
 
-        # Calculate the embeddings of the words and documents.
-        if show_progress:
-            print("Creating Word Embeddings...")
-        self.word_embeds = self._create_word_embeddings(show_progress=show_progress)
-        if show_progress:
-            print("Creating Document Embeddings...")
-        self.doc_embeds = self._create_docs_embeddings(show_progress=show_progress)
-        if show_progress:
-            print("Finding Topics...")
-        # Don't Show Progress - Multithreading in UMAP messes it up.
-        self.topic_embeds = self._find_topics(show_progress=False)
-        if show_progress:
-            print("Organizing documents by topics...")
-        self.topic_docs = self._find_doc_topics(show_progress=show_progress)
-        if show_progress:
-            print("Creating topics vocabulary...")
-        self.topic_words = self._find_word_topics(show_progress=show_progress)
-        self.num_topics = len(self.topic_embeds)
+            # Load Index Dictionary for basic attributes.
+            if show_progress:
+                print("Loading Topic Model basic attributes...")
+            model_index_path = join(model_folder_path, self.model_index_file)
+            if not isfile(model_index_path):
+                raise FileNotFoundError("There is no Attributes Index available.")
+            with open(model_index_path, 'r') as f:
+                topic_model_index = json.load(f)
+            # Get the Attributes.
+            self.model_type = topic_model_index['model_type']
+            self.use_title_abstract = topic_model_index['use_title_abstract']
+            self.num_topics = topic_model_index['num_topics']
+            self.corpus_ids = topic_model_index['corpus_ids']
+            self.topic_docs = topic_model_index['topic_docs']
+            self.topic_words = topic_model_index['topic_words']
+
+            # Load Word Embeddings Dictionary.
+            if show_progress:
+                print("Loading Topic Model's word embeddings...")
+            word_index_path = join(model_folder_path, self.word_embeds_file)
+            if not isfile(word_index_path):
+                raise FileNotFoundError("There is no Word Embeddings available.")
+            with open(word_index_path, 'r') as f:
+                word_embeds_index = json.load(f)
+            # Progress Variables.
+            count = 0
+            total = len(word_embeds_index)
+            # Transform the Word Embeddings to Numpy.ndarray
+            self.word_embeds = {}
+            for word_key, word_embed in word_embeds_index.items():
+                self.word_embeds[word_key] = np.array(word_embed)
+                if show_progress:
+                    count += 1
+                    progress_bar(count, total)
+
+            # Load Doc Embeddings Dictionary.
+            if show_progress:
+                print("Loading Topic Model's doc embeddings...")
+            doc_index_path = join(model_folder_path, self.doc_embeds_file)
+            if not isfile(doc_index_path):
+                raise FileNotFoundError("There is no Doc Embeddings available.")
+            with open(doc_index_path, 'r') as f:
+                doc_embeds_index = json.load(f)
+            # Progress Variables.
+            count = 0
+            total = len(doc_embeds_index)
+            # Transform Doc Embeddings to Numpy.ndarray
+            self.doc_embeds = {}
+            for doc_key, doc_embed in doc_embeds_index.items():
+                self.doc_embeds[doc_key] = np.array(doc_embed)
+                if show_progress:
+                    count += 1
+                    progress_bar(count, total)
+
+            # Load Topic Embeddings Dictionary.
+            if show_progress:
+                print("Loading Topic's Embeddings...")
+            topic_index_path = join(model_folder_path, self.topic_embeds_file)
+            if not isfile(topic_index_path):
+                raise FileNotFoundError("There is no Topic Embeddings available.")
+            with open(topic_index_path, 'r') as f:
+                topic_embeds_index = json.load(f)
+            # Progress Variables.
+            count = 0
+            total = len(topic_embeds_index)
+            # Transform Topic Embeddings to Numpy.ndarray
+            self.topic_embeds = {}
+            for topic_key, topic_embed in topic_embeds_index.items():
+                self.topic_embeds[topic_key] = np.array(topic_embed)
+                if show_progress:
+                    count += 1
+                    progress_bar(count, total)
+        else:
+            # -- Create Topic Model --
+            # Load CORD-19 Corpus.
+            if corpus:
+                self.corpus = corpus
+            else:
+                self.corpus = Papers()
+            self.corpus_ids = self.corpus.papers_cord_uids()
+
+            # Load Document Model.
+            if doc_model:
+                self.doc_model = doc_model
+            else:
+                self.doc_model = BertCord19()
+            self.model_type = self.doc_model.model_type()
+
+            # Save if we are only using the Title and Abstract of the Papers.
+            self.use_title_abstract = only_title_abstract
+
+            # Check we are using a supported model.
+            if self.model_type not in self.supported_doc_models:
+                raise NameError(f"The model type <{self.model_type}> is not supported.")
+
+            # Calculate the embeddings of the words and documents.
+            if show_progress:
+                print("Creating Word Embeddings...")
+            self.word_embeds = self._create_word_embeddings(show_progress=show_progress)
+            if show_progress:
+                print("Creating Document Embeddings...")
+            self.doc_embeds = self._create_docs_embeddings(show_progress=show_progress)
+            if show_progress:
+                print("Finding Topics...")
+            self.topic_embeds = self._find_topics(show_progress=show_progress)
+            self.num_topics = len(self.topic_embeds)
+            if show_progress:
+                print("Organizing documents by topics...")
+            self.topic_docs = self._find_doc_topics(show_progress=show_progress)
+            if show_progress:
+                print("Creating topics vocabulary...")
+            self.topic_words = self._find_word_topics(show_progress=show_progress)
 
     def top_topics(self):
         """
@@ -274,20 +382,12 @@ class TopicModel:
         # Find the average embed per label.
         topic_embeddings = {}
         for topic_label, label_embeds in topic_label_embeds.items():
-            # # Transform embeddings from Torch to Numpy to find average.
-            # numpy_embeds = [embed.numpy() for embed in label_embeds]
-            # mean_embeds = numpy.mean(numpy_embeds, axis=0)
-            # # Transform the average embedding into torch again.
-            # topic_torch_embed = torch.from_numpy(mean_embeds)
-            # # Save the topic embedding.
-            # topic_embeddings[topic_label] = topic_torch_embed
-
             # Use Numpy to get the average embedding.
             mean_embeds = np.mean(label_embeds, axis=0)
             topic_embeddings[topic_label] = mean_embeds
 
-            # Progress.
             if show_progress:
+                count += 1
                 progress_bar(count, total)
 
         # The embeddings of the topics.
@@ -304,6 +404,10 @@ class TopicModel:
         Returns: A dictionary with the topic ID as key, and the list of documents
             belonging to the topics as value.
         """
+        # Check we have at least a topic.
+        if self.num_topics == 0:
+            return {}
+
         # Progress Variables.
         count = 0
         total = len(self.doc_embeds)
@@ -339,6 +443,10 @@ class TopicModel:
         Returns: A dictionary containing the topic IDs as keys, and th elist of
             words belonging to the topic as values.
         """
+        # Check we have at least a topic.
+        if self.num_topics == 0:
+            return {}
+
         # Progress Variables
         count = 0
         total = len(self.word_embeds)
@@ -393,6 +501,108 @@ class TopicModel:
         # The closest topic ID.
         return closest_topic, max_similarity
 
+    def save_topic_model(self, model_id: str = None, show_progress=False):
+        """
+        Save the topic model. The saved Topic Model can be loaded later using
+        the 'model_id'.
+
+        Args:
+            model_id: String with the ID we are using to identify the topic
+                model.
+            show_progress: A Bool representing whether we show the progress of
+                the function or not.
+        """
+        # Progress Variables.
+        count = 0
+        total = len(self.word_embeds) + len(self.doc_embeds) + len(self.topic_embeds)
+
+        # Check the project data folders exist.
+        if not isdir(self.data_folder):
+            mkdir(self.data_folder)
+        topic_models_path = join(self.data_folder, self.topic_models_folder)
+        if not isdir(topic_models_path):
+            mkdir(topic_models_path)
+
+        # Create folder for this topic model using ID or default.
+        if model_id:
+            model_folder_id = self.topic_model_prefix + model_id
+        else:
+            model_folder_id = self.topic_model_prefix + 'default'
+        model_folder_path = join(topic_models_path, model_folder_id)
+        if not isdir(model_folder_path):
+            mkdir(model_folder_path)
+
+        # Create & Save Index Dictionary for basic attributes.
+        if show_progress:
+            print("Saving Topic Model basic attributes...")
+        topic_model_index = {
+            'model_type': self.model_type,
+            'use_title_abstract': self.use_title_abstract,
+            'num_topics': self.num_topics,
+            'corpus_ids': self.corpus_ids,
+            'topic_docs': self.topic_docs,
+            'topic_words': self.topic_words,
+        }
+        # Create index path.
+        model_index_path = join(model_folder_path, self.model_index_file)
+        with open(model_index_path, 'w') as f:
+            json.dump(topic_model_index, f)
+
+        # Progress Saving Dictionaries.
+        if show_progress:
+            print("Saving embedding dictionaries of Topic Model...")
+
+        # Save Word Embeddings, first transforming dict to python types.
+        word_embeds_index = {}
+        for word_key, word_embed in self.word_embeds.items():
+            word_embeds_index[word_key] = word_embed.tolist()
+            if show_progress:
+                count += 1
+                progress_bar(count, total)
+        # Create Word index path.
+        word_index_path = join(model_folder_path, self.word_embeds_file)
+        with open(word_index_path, 'w') as f:
+            json.dump(word_embeds_index, f)
+
+        # Save Doc Embeddings, transforming the dict to default python type.
+        doc_embeds_index = {}
+        for doc_key, doc_embed in self.doc_embeds.items():
+            doc_embeds_index[doc_key] = doc_embed.tolist()
+            if show_progress:
+                count += 1
+                progress_bar(count, total)
+        # Create Doc Index path.
+        doc_index_path = join(model_folder_path, self.doc_embeds_file)
+        with open(doc_index_path, 'w') as f:
+            json.dump(doc_embeds_index, f)
+
+        # Save Topics Embeddings, transforming dict to default python type.
+        topic_embeds_index = {}
+        for topic_key, topic_embed in self.topic_embeds.items():
+            topic_embeds_index[topic_key] = topic_embed.tolist()
+            if show_progress:
+                count += 1
+                progress_bar(count, total)
+        # Create Topic Index path.
+        topic_index_path = join(model_folder_path, self.topic_embeds_file)
+        with open(topic_index_path, 'w') as f:
+            json.dump(topic_embeds_index, f)
+
+    @classmethod
+    def load(cls, model_id: str = None, show_progress=False):
+        """
+        Load a previously saved Topic Model.
+
+        Args:
+            model_id: String with the ID we are using to identify the topic
+                model.
+            show_progress: A Bool representing whether we show the progress of
+                the function or not.
+        Returns:
+            An instance of the TopicModel class.
+        """
+        return cls(_used_saved=True, _model_id=model_id, show_progress=show_progress)
+
 
 if __name__ == '__main__':
     # Record the Runtime of the Program
@@ -419,8 +629,7 @@ if __name__ == '__main__':
     print(f"[{stopwatch.formatted_runtime()}]")
 
     print("\nLoading Topic Model...")
-    topic_model = TopicModel(corpus=rand_sample, doc_model=my_model,
-                             only_title_abstract=True, show_progress=True)
+    topic_model = TopicModel(corpus=rand_sample, doc_model=my_model, only_title_abstract=True, show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
