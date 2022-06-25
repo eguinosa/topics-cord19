@@ -373,14 +373,15 @@ class TopicModel:
         topic_labels = cluster_labels.labels_
         topic_label_embeds = {}
         for label, doc_embed in zip(topic_labels, doc_embeddings):
+            topic_id = int(label)
             # Skip Noise labels:
-            if label == -1:
+            if topic_id == -1:
                 continue
             # Check if this the first time we find this topic.
-            if label not in topic_label_embeds:
-                topic_label_embeds[label] = [doc_embed]
+            if topic_id not in topic_label_embeds:
+                topic_label_embeds[topic_id] = [doc_embed]
             else:
-                topic_label_embeds[label].append(doc_embed)
+                topic_label_embeds[topic_id].append(doc_embed)
 
         # Progress bar variables.
         count = 0
@@ -507,7 +508,7 @@ class TopicModel:
         # The closest topic ID.
         return closest_topic, max_similarity
 
-    def save_topic_model(self, model_id: str = None, show_progress=False):
+    def save(self, model_id: str = None, show_progress=False):
         """
         Save the topic model. The saved Topic Model can be loaded later using
         the 'model_id'.
@@ -617,12 +618,10 @@ if __name__ == '__main__':
     # --Test TopicModel class--
 
     # Load Random Sample to use a limited amount of papers in CORD-19.
-    test_size = 3_000
+    test_size = 1_000
     print(f"\nLoading Random Sample of {big_number(test_size)} documents...")
-    sample = RandomSample(paper_type='medium', sample_size=test_size,
-                          show_progress=True)
-    # Load Last Used Sample.
-    # sample = RandomSample.load(show_progress=True)
+    # sample = RandomSample(paper_type='medium', sample_size=test_size, show_progress=True)
+    sample = RandomSample.load(show_progress=True)
     # Load RandomSample() saved with an id.
     # sample = RandomSample.load(sample_id='10000_docs', show_progress=True)
     print("Done.")
@@ -656,7 +655,8 @@ if __name__ == '__main__':
     print(f"[{stopwatch.formatted_runtime()}]")
 
     print("\nLoading Topic Model...")
-    topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True, show_progress=True)
+    # topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True, show_progress=True)
+    topic_model = TopicModel.load(show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
@@ -675,6 +675,22 @@ if __name__ == '__main__':
         print(f"\n----> Topic <{i}>:")
         for word_sim in word_list:
             print(word_sim)
+
+    # print("\nSaving Topic Model...")
+    # topic_model.save(show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+    #
+    # print("\nLoading saved Topic Model...")
+    # saved_model = TopicModel.load(show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+    #
+    # print(f"\n{saved_model.num_topics} topics in saved Topic Model.")
+    # print("\nTopics and Document Count:")
+    # all_topics = saved_model.top_topics()
+    # for topic in all_topics:
+    #     print(topic)
 
     print("\nDone.")
     print(f"[{stopwatch.formatted_runtime()}]\n")
