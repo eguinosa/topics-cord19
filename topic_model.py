@@ -1,11 +1,12 @@
 # Gelin Eguinosa Rosique
 
 import json
-from os import mkdir
-from os.path import isdir, isfile, join
-import numpy as np
 import umap
 import hdbscan
+import numpy as np
+from os import mkdir
+from os.path import isdir, isfile, join
+from numpy.linalg import norm
 from sentence_transformers import util
 
 from corpus_cord19 import CorpusCord19
@@ -192,6 +193,85 @@ class TopicModel:
                 print("Creating topics vocabulary...")
             self.topic_words = self._find_word_topics(show_progress=show_progress)
 
+            # Create Default values for topics created with a fixed number of
+            # desired topics:
+            # ----------------------------------------------------------------
+            # Bool indicating if we have hierarchically reduced topics.
+            self.new_topics = False
+            # Create attributes for the Hierarchical Topic Reduction.
+            self.new_topic_embeds = None
+            self.new_num_topics = None
+            self.new_topic_docs = None
+            self.new_topic_words = None
+            # Dictionary with new topics as keys, and their closest original
+            # topics as values.
+            self.topics_hierarchy = None
+
+    def generate_new_topics(self, req_num_topics: int, show_progress=False):
+        """
+        Create a new Hierarchical Topic Model with specified number of topics
+        (num_topics). The 'num_topics' need to be at least 2 topics, and be
+        smaller than the original number of topics found.
+
+        Args:
+            req_num_topics: The desired topic count for the new Topic Model.
+            show_progress: Bool representing whether we show the progress of
+                the function or not.
+        """
+        # Check the number of topics requested is valid.
+        if 1 < req_num_topics < self.num_topics:
+            # Invalid topic size requested. Reset reduced topics variables.
+            self.new_topics = False
+            self.new_topic_embeds = None
+            self.new_num_topics = None
+            self.new_topic_docs = None
+            self.new_topic_words = None
+            self.topics_hierarchy = None
+            # Progress.
+            if show_progress:
+                print("Invalid number of topics requested. No hierarchical topic"
+                      " reduction performed.")
+            # Exit function.
+            return
+
+        # Check if we can use previously calculated New Topics...
+        # [...Not Done Yet]
+
+        # Initialize New Topics Variables.
+        current_num_topics = self.num_topics
+        new_topic_embeds = self.topic_embeds.copy()
+        new_topic_sizes = dict([(topic_id, len(self.topic_docs[topic_id]))
+                                for topic_id in self.topic_docs.keys()])
+
+        # Progress Variables.
+        count = 0
+        total = current_num_topics - req_num_topics
+        # Perform topic reduction until we get the desired number of topics
+        while req_num_topics < current_num_topics:
+            # Get the smallest topic.
+            new_topics_list = list(new_topic_embeds.keys())
+            min_topic_id = min(new_topics_list, key=lambda x: len(self.topic_docs[x]))
+            min_embed = new_topic_embeds[min_topic_id]
+
+            # Get the closest topic to the small topic.
+            close_topic_id, _ = self._closest_topic(min_embed)
+            close_embed = new_topic_embeds[close_topic_id]
+
+            # Merge the embedding of the topics.
+            min_size = new_topic_sizes[min_topic_id]
+            close_size = new_topic_sizes[close_topic_id]
+            total_size = min_size + close_size
+            merged_topic_embed = (min_size * min_embed + close_size * close_embed) / total_size
+
+            # Delete Smallest Topic.
+            del new_topic_embeds[min_topic_id]
+            # Update the Embedding of the closest Topic to the mean of them both.
+            new_topic_embeds[close_topic_id] = merged_topic_embed
+
+            # Update Document Count per Topic.
+            pass
+
+
     def top_topics(self):
         """
         Make a sorted list with the topics organized by the amount of documents
@@ -314,9 +394,6 @@ class TopicModel:
             if self.model_type == 'specter':
                 # Using the Specter Manager Now.
                 doc_embedding = self.doc_model.document_vector(cord_uid)
-                # # With Specter, load the embedding from CORD-19 dataset.
-                # doc_vector = self.corpus.paper_embedding(cord_uid)
-                # doc_embedding = np.array(doc_vector)
             elif self.use_title_abstract or self.model_type == 'bert':
                 # BERT has a length limit, use only title and abstract.
                 doc_content = self.corpus.paper_title_abstract(cord_uid)
@@ -484,28 +561,15 @@ class TopicModel:
         this embedding using cosine similarity.
 
         Args:
-            embedding: A Tensor (most likely) with the vector of the word or
-                document we want to classify.
+            embedding: Numpy.ndarray with the vector of the word or document we
+                want to classify.
 
         Returns:
-            A tuple with the ID of the closest topic and their similarity.
+            A tuple with the ID of the closest topic and its similarity to the
+                'embedding'.
         """
-        # Use iterator to get the topic and their embeddings
-        topic_iterator = iter(self.topic_embeds.items())
-
-        # First topic cosine similarity.
-        closest_topic, topic_embed = next(topic_iterator)
-        max_similarity = float(util.cos_sim(embedding, topic_embed))
-
-        # Go through the rest of the topics.
-        for topic_id, topic_embed in topic_iterator:
-            new_similarity = float(util.cos_sim(embedding, topic_embed))
-            if new_similarity > max_similarity:
-                # New closer topic.
-                closest_topic = topic_id
-                max_similarity = new_similarity
-
-        # The closest topic ID.
+        # Use closest_vector(embedding, vectors_dict).
+        closest_topic, max_similarity = closest_vector(embedding, self.topic_embeds)
         return closest_topic, max_similarity
 
     def save(self, model_id: str = None, show_progress=False):
@@ -611,6 +675,57 @@ class TopicModel:
         return cls(_used_saved=True, _model_id=model_id, show_progress=show_progress)
 
 
+def closest_vector(embedding, vectors_dict):
+    """
+    Given the embedding of a document or word and a dictionary containing a
+    group of vectors with their embeddings. Find the closest vector to the given
+    embedding using cosine similarity.
+
+    Args:
+        embedding: Numpy.ndarray with the embedding of the word or document that
+            we are using to find the closest vector.
+        vectors_dict: Dictionary containing the vectors with the vectors IDs as
+            keys and their embeddings as values.
+
+    Returns:
+        A tuple with the ID of the closest vector and its similarity to the
+            'embedding' we received as parameter.
+    """
+    # Use iter to get the vectors IDs and their embeddings.
+    vector_iter = iter(vectors_dict.items())
+
+    # Get cosine similarity to the first vector.
+    closest_vector_id, vector_embed = next(vector_iter)
+    max_similarity = float(util.cos_sim(embedding, vector_embed))
+
+    # Iterate through the rest of the vectors.
+    for vector_id, vector_embed in vector_iter:
+        new_similarity = float(util.cos_sim(embedding, vector_embed))
+        if new_similarity > max_similarity:
+            # New Closer Vector
+            closest_vector_id = vector_id
+            max_similarity = new_similarity
+
+    # The closest vector ID with its similarity to the 'embedding'.
+    return closest_vector_id, max_similarity
+
+
+def cosine_similarity(a: np.ndarray, b: np.ndarray):
+    """
+    Calculate the cosine similarity between the vectors 'a' and 'b'.
+
+    Args:
+        a: Numpy.ndarray containing one of the vectors embeddings.
+        b: Numpy.ndarray containing one of the vectors embeddings.
+
+    Returns:
+        Float with the cosine similarity between the two vectors.
+    """
+    # Use Numpy.
+    result = np.dot(a, b) / (norm(a) * norm(b))
+    return result
+
+
 if __name__ == '__main__':
     # Record the Runtime of the Program
     stopwatch = TimeKeeper()
@@ -655,13 +770,13 @@ if __name__ == '__main__':
     print(f"[{stopwatch.formatted_runtime()}]")
 
     print("\nLoading Topic Model...")
-    # topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True, show_progress=True)
-    topic_model = TopicModel.load(show_progress=True)
+    topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True, show_progress=True)
+    # topic_model = TopicModel.load(show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
-    num_topics = topic_model.num_topics
-    print(f"\n{num_topics} topics found.")
+    number_topics = topic_model.num_topics
+    print(f"\n{number_topics} topics found.")
 
     print("\nTopics and Document count:")
     all_topics = topic_model.top_topics()
