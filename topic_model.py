@@ -7,15 +7,15 @@ import numpy as np
 from os import mkdir
 from os.path import isdir, isfile, join
 from numpy.linalg import norm
-from sentence_transformers import util
+# from sentence_transformers import util
 
 from corpus_cord19 import CorpusCord19
 from papers import Papers
 from document_model import DocumentModel
 from random_sample import RandomSample
 from bert_cord19 import BertCord19
-from specter_manager import SpecterManager
-from doc2vec_cord19 import Doc2VecCord19
+# from specter_manager import SpecterManager
+# from doc2vec_cord19 import Doc2VecCord19
 from doc_tokenizers import doc_tokenizer
 from extra_funcs import progress_bar, big_number
 from time_keeper import TimeKeeper
@@ -270,7 +270,6 @@ class TopicModel:
 
             # Update Document Count per Topic.
             pass
-
 
     def top_topics(self):
         """
@@ -696,11 +695,11 @@ def closest_vector(embedding, vectors_dict):
 
     # Get cosine similarity to the first vector.
     closest_vector_id, vector_embed = next(vector_iter)
-    max_similarity = float(util.cos_sim(embedding, vector_embed))
+    max_similarity = cosine_similarity(embedding, vector_embed)
 
     # Iterate through the rest of the vectors.
     for vector_id, vector_embed in vector_iter:
-        new_similarity = float(util.cos_sim(embedding, vector_embed))
+        new_similarity = cosine_similarity(embedding, vector_embed)
         if new_similarity > max_similarity:
             # New Closer Vector
             closest_vector_id = vector_id
