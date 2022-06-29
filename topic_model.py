@@ -149,6 +149,22 @@ class TopicModel:
                 if show_progress:
                     count += 1
                     progress_bar(count, total)
+
+            # *************For Now:
+            # Needs Update!!!!
+            # Create Default values for topics created with a fixed number of
+            # desired topics:
+            # ----------------------------------------------------------------
+            # Bool indicating if we have hierarchically reduced topics.
+            self.new_topics = False
+            # Create attributes for the Hierarchical Topic Reduction.
+            self.new_num_topics = None
+            self.new_topic_embeds = None
+            self.new_topic_docs = None
+            self.new_topic_words = None
+            # Dictionary with new topics as keys, and their closest original
+            # topics as values.
+            self.topics_hierarchy = None
         else:
             # -- Create Topic Model --
             # Load CORD-19 Corpus.
@@ -188,11 +204,9 @@ class TopicModel:
             if show_progress:
                 print("Organizing documents by topics...")
             self.topic_docs = find_child_embeddings(self.topic_embeds, self.doc_embeds)
-            # self.topic_docs = self._find_doc_topics(show_progress=show_progress)
             if show_progress:
                 print("Creating topics vocabulary...")
             self.topic_words = find_child_embeddings(self.topic_embeds, self.word_embeds)
-            # self.topic_words = self._find_word_topics(show_progress=show_progress)
 
             # Create Default values for topics created with a fixed number of
             # desired topics:
@@ -208,19 +222,19 @@ class TopicModel:
             # topics as values.
             self.topics_hierarchy = None
 
-    def generate_new_topics(self, req_num_topics: int, show_progress=False):
+    def generate_new_topics(self, number_topics: int, show_progress=False):
         """
         Create a new Hierarchical Topic Model with specified number of topics
         (num_topics). The 'num_topics' need to be at least 2 topics, and be
         smaller than the original number of topics found.
 
         Args:
-            req_num_topics: The desired topic count for the new Topic Model.
+            number_topics: The desired topic count for the new Topic Model.
             show_progress: Bool representing whether we show the progress of
                 the function or not.
         """
         # Check the number of topics requested is valid.
-        if 1 < req_num_topics < self.num_topics:
+        if not 1 < number_topics < self.num_topics:
             # Invalid topic size requested. Reset reduced topics variables.
             self.new_topics = False
             self.new_topic_embeds = None
@@ -246,9 +260,9 @@ class TopicModel:
 
         # Progress Variables.
         count = 0
-        total = current_num_topics - req_num_topics
+        total = current_num_topics - number_topics
         # Perform topic reduction until we get the desired number of topics
-        while req_num_topics < current_num_topics:
+        while number_topics < current_num_topics:
             # Get the smallest topic.
             new_topics_list = list(new_topic_embeds.keys())
             min_topic_id = min(new_topics_list, key=lambda x: len(self.topic_docs[x]))
@@ -278,25 +292,50 @@ class TopicModel:
                 count += 1
                 progress_bar(count, total)
 
-        # Assign Documents & Words to the new Topics.
-        pass
+        # Update New Topics' Attributes.
+        self.new_topics = True
+        self.new_num_topics = current_num_topics
+        # Reset IDs of the New Topics.
+        self.new_topic_embeds = dict([(new_id, topic_embed)
+                                      for new_id, topic_embed
+                                      in enumerate(new_topic_embeds.values())])
+        # Assign Words and Documents to the New Topics.
+        self.new_topic_docs = find_child_embeddings(self.new_topic_embeds,
+                                                    self.doc_embeds,
+                                                    show_progress=show_progress)
+        self.new_topic_words = find_child_embeddings(self.new_topic_embeds,
+                                                     self.word_embeds,
+                                                     show_progress=show_progress)
+        # Assign Original Topics to the New Topics.
+        self.topics_hierarchy = find_child_embeddings(self.new_topic_embeds,
+                                                      self.topic_embeds)
 
-    def top_topics(self):
+    def top_topics(self, show_originals=False):
         """
         Make a sorted list with the topics organized by the amount of documents
         they represent.
 
+        Args:
+            show_originals: Bool to indicate if we need to use the original
+                topics even if we already have found New Topics.
+
         Returns:
             A list of tuples with the topics' ID and their document count.
         """
+        # Choose between the original topics or the hierarchical reduced.
+        if show_originals or not self.new_topics:
+            topic_docs_source = self.topic_docs
+        else:
+            topic_docs_source = self.new_topic_docs
+
         # Form list of topics with their size.
         topic_docs = [(topic_id, len(docs_list))
-                      for topic_id, docs_list in self.topic_docs.items()]
+                      for topic_id, docs_list in topic_docs_source.items()]
         # Sort by size.
         topic_docs.sort(key=lambda count: count[1], reverse=True)
         return topic_docs
 
-    def top_words_topic(self, topic_id, num_words=10):
+    def top_words_topic(self, topic_id, num_words=10, show_originals=False):
         """
         Find the top n words for the given topic. If 'num_words' is -1, then
         return all the words belonging to this topic.
@@ -304,38 +343,62 @@ class TopicModel:
         Args:
             topic_id: The topic from which we want the top words.
             num_words: The amount of words from that topic that we want.
+            show_originals: Bool to indicate if we need to use the original
+                topics even if we already have found New Topics.
 
         Returns:
             A list of tuples with the words and their similarity to the topic.
         """
+        # Choose between the original topics or the hierarchical reduced.
+        if show_originals or not self.new_topics:
+            topic_words_source = self.topic_words
+        else:
+            topic_words_source = self.new_topic_words
+
         # Check the topic exists.
-        if topic_id not in self.topic_words:
+        if topic_id not in topic_words_source:
             raise NameError("Topic not found.")
 
         # Get the list of words we are returning.
         if num_words == -1:
             # All words in the topic.
-            result = self.topic_words[topic_id]
+            result = topic_words_source[topic_id]
         else:
             # Check we are not giving more words than what we can.
-            word_count = min(num_words, len(self.topic_words[topic_id]))
+            word_count = min(num_words, len(topic_words_source[topic_id]))
             # Get the number of words requested.
-            result = self.topic_words[topic_id][:word_count]
+            result = topic_words_source[topic_id][:word_count]
         # List of tuples with words and similarities.
         return result
 
-    def all_topics_top_words(self, num_words=10):
+    def all_topics_top_words(self, num_words=10, show_originals=False):
         """
         Make a list with the top words per topics. If 'num_words' is -1, returns
         all the words belonging to a topic.
 
-        Returns: A list of tuples with the Topic ID and their top_words_topic(),
-            the latter containing the top words for the corresponding topic.
+        Args:
+            num_words: The amount of words we want from each topic.
+            show_originals: Bool to indicate if we need to use the original
+                topics even if we already have found New Topics.
+
+        Returns:
+            A list of tuples with the Topic ID and their top_words_topic(),
+                the latter containing the top words for the corresponding topic.
         """
+        # Check if we are using the original topics or the hierarchical reduced.
+        if show_originals or not self.new_topics:
+            show_orishas = True
+        else:
+            show_orishas = False
+
+        # Create list of words per topic.
         topics_top_words = []
-        for topic_id, _ in self.top_topics():
-            topic_top_words = self.top_words_topic(topic_id, num_words=num_words)
+        for topic_id, _ in self.top_topics(show_originals=show_orishas):
+            topic_top_words = self.top_words_topic(topic_id,
+                                                   num_words=num_words,
+                                                   show_originals=show_orishas)
             topics_top_words.append((topic_id, topic_top_words))
+
         # Per topic, a list with the words and their similarity to the topic.
         return topics_top_words
 
@@ -485,101 +548,6 @@ class TopicModel:
 
         # The embeddings of the topics.
         return topic_embeddings
-
-    # def _find_doc_topics(self, show_progress=False):
-    #     """
-    #     Create a dictionary assigning each document to their closest topic.
-    #
-    #     Args:
-    #         show_progress: A Bool representing whether we show the progress of
-    #             the function or not.
-    #
-    #     Returns: A dictionary with the topic ID as key, and the list of documents
-    #         belonging to the topics as value.
-    #     """
-    #     # Check we have at least a topic.
-    #     if self.num_topics == 0:
-    #         return {}
-    #
-    #     # Progress Variables.
-    #     count = 0
-    #     total = len(self.doc_embeds)
-    #
-    #     # Iterate through the documents and their embeddings.
-    #     topic_documents = {}
-    #     for doc_id, doc_embed in self.doc_embeds.items():
-    #         # Find the closest topic to the document.
-    #         topic_id, similarity = self._closest_topic(doc_embed)
-    #         # Check if we have found this topic before.
-    #         if topic_id in topic_documents:
-    #             topic_documents[topic_id].append((doc_id, similarity))
-    #         else:
-    #             topic_documents[topic_id] = [(doc_id, similarity)]
-    #         # Show Progress
-    #         if show_progress:
-    #             count += 1
-    #             progress_bar(count, total)
-    #
-    #     # Sort the Topic's Documents by similarity.
-    #     for tuple_doc_sim in topic_documents.values():
-    #         tuple_doc_sim.sort(key=lambda doc_sim: doc_sim[1], reverse=True)
-    #     return topic_documents
-    #
-    # def _find_word_topics(self, show_progress=False):
-    #     """
-    #     Assign each word in the vocabulary to its closest topic.
-    #
-    #     Args:
-    #         show_progress: A Bool representing whether we show the progress of
-    #             the function or not.
-    #
-    #     Returns: A dictionary containing the topic IDs as keys, and th elist of
-    #         words belonging to the topic as values.
-    #     """
-    #     # Check we have at least a topic.
-    #     if self.num_topics == 0:
-    #         return {}
-    #
-    #     # Progress Variables
-    #     count = 0
-    #     total = len(self.word_embeds)
-    #
-    #     # Iterate through the words and their embeddings.
-    #     topic_words = {}
-    #     for word, word_embed in self.word_embeds.items():
-    #         # Find the closest topic to the word.
-    #         topic_id, similarity = self._closest_topic(word_embed)
-    #         # Check if the topic is already in the dictionary.
-    #         if topic_id in topic_words:
-    #             topic_words[topic_id].append((word, similarity))
-    #         else:
-    #             topic_words[topic_id] = [(word, similarity)]
-    #         # Show Progress.
-    #         if show_progress:
-    #             count += 1
-    #             progress_bar(count, total)
-    #
-    #     # Sort the words' lists using their similarity to their topic.
-    #     for tuple_word_sim in topic_words.values():
-    #         tuple_word_sim.sort(key=lambda word_tuple: word_tuple[1], reverse=True)
-    #     return topic_words
-    #
-    # def _closest_topic(self, embedding):
-    #     """
-    #     Given the embedding of a document or a word, find the closest topic to
-    #     this embedding using cosine similarity.
-    #
-    #     Args:
-    #         embedding: Numpy.ndarray with the vector of the word or document we
-    #             want to classify.
-    #
-    #     Returns:
-    #         A tuple with the ID of the closest topic and its similarity to the
-    #             'embedding'.
-    #     """
-    #     # Use closest_vector(embedding, vectors_dict).
-    #     closest_topic, max_similarity = closest_vector(embedding, self.topic_embeds)
-    #     return closest_topic, max_similarity
 
     def _topic_document_count(self, topic_embeds_dict: dict, show_progress=False):
         """
@@ -868,13 +836,13 @@ if __name__ == '__main__':
     print(f"[{stopwatch.formatted_runtime()}]")
 
     print("\nLoading Topic Model...")
-    topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True, show_progress=True)
-    # topic_model = TopicModel.load(show_progress=True)
+    # topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True, show_progress=True)
+    topic_model = TopicModel.load(show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
-    number_topics = topic_model.num_topics
-    print(f"\n{number_topics} topics found.")
+    total_topics = topic_model.num_topics
+    print(f"\n{total_topics} topics found.")
 
     print("\nTopics and Document count:")
     all_topics = topic_model.top_topics()
@@ -883,6 +851,26 @@ if __name__ == '__main__':
 
     top_n = 15
     print(f"\nTop {top_n} words per topic:")
+    words_per_topic = topic_model.all_topics_top_words(top_n)
+    for i, word_list in words_per_topic:
+        print(f"\n----> Topic <{i}>:")
+        for word_sim in word_list:
+            print(word_sim)
+
+    # Creating Hierarchically Reduced Topics.
+    the_num_topics = 3
+    print(f"\nCreating Topic Model with {the_num_topics} topics.")
+    topic_model.generate_new_topics(number_topics=3, show_progress=True)
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
+
+    print("\nNew Topics and Document count:")
+    all_topics = topic_model.top_topics()
+    for topic in all_topics:
+        print(topic)
+
+    top_n = 15
+    print(f"\nTop {top_n} words per new topic:")
     words_per_topic = topic_model.all_topics_top_words(top_n)
     for i, word_list in words_per_topic:
         print(f"\n----> Topic <{i}>:")
