@@ -857,7 +857,7 @@ if __name__ == '__main__':
         for word_sim in word_list:
             print(word_sim)
 
-    # Creating Hierarchically Reduced Topics.
+    # --Test Creating Hierarchically Reduced Topics--
     the_num_topics = 3
     print(f"\nCreating Topic Model with {the_num_topics} topics.")
     topic_model.generate_new_topics(number_topics=3, show_progress=True)
@@ -877,6 +877,7 @@ if __name__ == '__main__':
         for word_sim in word_list:
             print(word_sim)
 
+    # --Test Saving Topic Model--
     # print("\nSaving Topic Model...")
     # topic_model.save(show_progress=True)
     # print("Done.")
