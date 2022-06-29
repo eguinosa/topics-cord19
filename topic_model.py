@@ -7,7 +7,6 @@ import numpy as np
 from os import mkdir
 from os.path import isdir, isfile, join
 from numpy.linalg import norm
-# from sentence_transformers import util
 
 from corpus_cord19 import CorpusCord19
 from papers import Papers
@@ -188,10 +187,12 @@ class TopicModel:
                 print(f"{self.num_topics} topics found.")
             if show_progress:
                 print("Organizing documents by topics...")
-            self.topic_docs = self._find_doc_topics(show_progress=show_progress)
+            self.topic_docs = find_child_embeddings(self.topic_embeds, self.doc_embeds)
+            # self.topic_docs = self._find_doc_topics(show_progress=show_progress)
             if show_progress:
                 print("Creating topics vocabulary...")
-            self.topic_words = self._find_word_topics(show_progress=show_progress)
+            self.topic_words = find_child_embeddings(self.topic_embeds, self.word_embeds)
+            # self.topic_words = self._find_word_topics(show_progress=show_progress)
 
             # Create Default values for topics created with a fixed number of
             # desired topics:
@@ -199,8 +200,8 @@ class TopicModel:
             # Bool indicating if we have hierarchically reduced topics.
             self.new_topics = False
             # Create attributes for the Hierarchical Topic Reduction.
-            self.new_topic_embeds = None
             self.new_num_topics = None
+            self.new_topic_embeds = None
             self.new_topic_docs = None
             self.new_topic_words = None
             # Dictionary with new topics as keys, and their closest original
@@ -254,7 +255,7 @@ class TopicModel:
             min_embed = new_topic_embeds[min_topic_id]
 
             # Get the closest topic to the small topic.
-            close_topic_id, _ = self._closest_topic(min_embed)
+            close_topic_id, _ = closest_vector(min_embed, self.topic_embeds)
             close_embed = new_topic_embeds[close_topic_id]
 
             # Merge the embedding of the topics.
@@ -267,9 +268,18 @@ class TopicModel:
             del new_topic_embeds[min_topic_id]
             # Update the Embedding of the closest Topic to the mean of them both.
             new_topic_embeds[close_topic_id] = merged_topic_embed
-
             # Update Document Count per Topic.
-            pass
+            new_topic_sizes = self._topic_document_count(new_topic_embeds)
+            # Update Current Number of Topics.
+            current_num_topics -= 1
+
+            # Show progress.
+            if show_progress:
+                count += 1
+                progress_bar(count, total)
+
+        # Assign Documents & Words to the new Topics.
+        pass
 
     def top_topics(self):
         """
@@ -476,100 +486,141 @@ class TopicModel:
         # The embeddings of the topics.
         return topic_embeddings
 
-    def _find_doc_topics(self, show_progress=False):
+    # def _find_doc_topics(self, show_progress=False):
+    #     """
+    #     Create a dictionary assigning each document to their closest topic.
+    #
+    #     Args:
+    #         show_progress: A Bool representing whether we show the progress of
+    #             the function or not.
+    #
+    #     Returns: A dictionary with the topic ID as key, and the list of documents
+    #         belonging to the topics as value.
+    #     """
+    #     # Check we have at least a topic.
+    #     if self.num_topics == 0:
+    #         return {}
+    #
+    #     # Progress Variables.
+    #     count = 0
+    #     total = len(self.doc_embeds)
+    #
+    #     # Iterate through the documents and their embeddings.
+    #     topic_documents = {}
+    #     for doc_id, doc_embed in self.doc_embeds.items():
+    #         # Find the closest topic to the document.
+    #         topic_id, similarity = self._closest_topic(doc_embed)
+    #         # Check if we have found this topic before.
+    #         if topic_id in topic_documents:
+    #             topic_documents[topic_id].append((doc_id, similarity))
+    #         else:
+    #             topic_documents[topic_id] = [(doc_id, similarity)]
+    #         # Show Progress
+    #         if show_progress:
+    #             count += 1
+    #             progress_bar(count, total)
+    #
+    #     # Sort the Topic's Documents by similarity.
+    #     for tuple_doc_sim in topic_documents.values():
+    #         tuple_doc_sim.sort(key=lambda doc_sim: doc_sim[1], reverse=True)
+    #     return topic_documents
+    #
+    # def _find_word_topics(self, show_progress=False):
+    #     """
+    #     Assign each word in the vocabulary to its closest topic.
+    #
+    #     Args:
+    #         show_progress: A Bool representing whether we show the progress of
+    #             the function or not.
+    #
+    #     Returns: A dictionary containing the topic IDs as keys, and th elist of
+    #         words belonging to the topic as values.
+    #     """
+    #     # Check we have at least a topic.
+    #     if self.num_topics == 0:
+    #         return {}
+    #
+    #     # Progress Variables
+    #     count = 0
+    #     total = len(self.word_embeds)
+    #
+    #     # Iterate through the words and their embeddings.
+    #     topic_words = {}
+    #     for word, word_embed in self.word_embeds.items():
+    #         # Find the closest topic to the word.
+    #         topic_id, similarity = self._closest_topic(word_embed)
+    #         # Check if the topic is already in the dictionary.
+    #         if topic_id in topic_words:
+    #             topic_words[topic_id].append((word, similarity))
+    #         else:
+    #             topic_words[topic_id] = [(word, similarity)]
+    #         # Show Progress.
+    #         if show_progress:
+    #             count += 1
+    #             progress_bar(count, total)
+    #
+    #     # Sort the words' lists using their similarity to their topic.
+    #     for tuple_word_sim in topic_words.values():
+    #         tuple_word_sim.sort(key=lambda word_tuple: word_tuple[1], reverse=True)
+    #     return topic_words
+    #
+    # def _closest_topic(self, embedding):
+    #     """
+    #     Given the embedding of a document or a word, find the closest topic to
+    #     this embedding using cosine similarity.
+    #
+    #     Args:
+    #         embedding: Numpy.ndarray with the vector of the word or document we
+    #             want to classify.
+    #
+    #     Returns:
+    #         A tuple with the ID of the closest topic and its similarity to the
+    #             'embedding'.
+    #     """
+    #     # Use closest_vector(embedding, vectors_dict).
+    #     closest_topic, max_similarity = closest_vector(embedding, self.topic_embeds)
+    #     return closest_topic, max_similarity
+
+    def _topic_document_count(self, topic_embeds_dict: dict, show_progress=False):
         """
-        Create a dictionary assigning each document to their closest topic.
+        Given a dictionary with the embeddings of a group of topics, count the
+        number of documents assign to each of the topics in the given dictionary.
 
         Args:
+            topic_embeds_dict: Dictionary with the topic IDs as keys and the
+                embeddings of the topics as values.
             show_progress: A Bool representing whether we show the progress of
                 the function or not.
 
-        Returns: A dictionary with the topic ID as key, and the list of documents
-            belonging to the topics as value.
+        Returns:
+            Dictionary containing the topic IDs as keys and the number of
+                documents belonging to each one in the current corpus.
         """
         # Check we have at least a topic.
-        if self.num_topics == 0:
+        if len(topic_embeds_dict) == 0:
             return {}
 
         # Progress Variables.
         count = 0
-        total = len(self.doc_embeds)
+        total = len(topic_embeds_dict)
 
         # Iterate through the documents and their embeddings.
-        topic_documents = {}
+        topic_docs_count = {}
         for doc_id, doc_embed in self.doc_embeds.items():
-            # Find the closest topic to the document.
-            topic_id, similarity = self._closest_topic(doc_embed)
+            # Find the closest topic to the current document.
+            topic_id, _ = closest_vector(doc_embed, topic_embeds_dict)
             # Check if we have found this topic before.
-            if topic_id in topic_documents:
-                topic_documents[topic_id].append((doc_id, similarity))
+            if topic_id in topic_docs_count:
+                topic_docs_count[topic_id] += 1
             else:
-                topic_documents[topic_id] = [(doc_id, similarity)]
-            # Show Progress
+                topic_docs_count[topic_id] = 0
+            # Show Progress:
             if show_progress:
                 count += 1
                 progress_bar(count, total)
 
-        # Sort the Topic's Documents by similarity.
-        for tuple_doc_sim in topic_documents.values():
-            tuple_doc_sim.sort(key=lambda doc_sim: doc_sim[1], reverse=True)
-        return topic_documents
-
-    def _find_word_topics(self, show_progress=False):
-        """
-        Assign each word in the vocabulary to its closest topic.
-
-        Args:
-            show_progress: A Bool representing whether we show the progress of
-                the function or not.
-
-        Returns: A dictionary containing the topic IDs as keys, and th elist of
-            words belonging to the topic as values.
-        """
-        # Check we have at least a topic.
-        if self.num_topics == 0:
-            return {}
-
-        # Progress Variables
-        count = 0
-        total = len(self.word_embeds)
-
-        # Iterate through the words and their embeddings.
-        topic_words = {}
-        for word, word_embed in self.word_embeds.items():
-            # Find the closest topic to the word.
-            topic_id, similarity = self._closest_topic(word_embed)
-            # Check if the topic is already in the dictionary.
-            if topic_id in topic_words:
-                topic_words[topic_id].append((word, similarity))
-            else:
-                topic_words[topic_id] = [(word, similarity)]
-            # Show Progress.
-            if show_progress:
-                count += 1
-                progress_bar(count, total)
-
-        # Sort the words' lists using their similarity to their topic.
-        for tuple_word_sim in topic_words.values():
-            tuple_word_sim.sort(key=lambda word_tuple: word_tuple[1], reverse=True)
-        return topic_words
-
-    def _closest_topic(self, embedding):
-        """
-        Given the embedding of a document or a word, find the closest topic to
-        this embedding using cosine similarity.
-
-        Args:
-            embedding: Numpy.ndarray with the vector of the word or document we
-                want to classify.
-
-        Returns:
-            A tuple with the ID of the closest topic and its similarity to the
-                'embedding'.
-        """
-        # Use closest_vector(embedding, vectors_dict).
-        closest_topic, max_similarity = closest_vector(embedding, self.topic_embeds)
-        return closest_topic, max_similarity
+        # The document count per each topic.
+        return topic_docs_count
 
     def save(self, model_id: str = None, show_progress=False):
         """
@@ -674,7 +725,7 @@ class TopicModel:
         return cls(_used_saved=True, _model_id=model_id, show_progress=show_progress)
 
 
-def closest_vector(embedding, vectors_dict):
+def closest_vector(embedding, vectors_dict: dict):
     """
     Given the embedding of a document or word and a dictionary containing a
     group of vectors with their embeddings. Find the closest vector to the given
@@ -707,6 +758,54 @@ def closest_vector(embedding, vectors_dict):
 
     # The closest vector ID with its similarity to the 'embedding'.
     return closest_vector_id, max_similarity
+
+
+def find_child_embeddings(parent_embeds: dict, child_embeds: dict,
+                          show_progress=True):
+    """
+    Given a 'parent_embeds' embeddings dictionary and a 'child_embeds'
+    embeddings dictionary, create a new dictionary assigning each of the
+    child_ids to their closest parent_id in the embedding space.
+
+    Args:
+        parent_embeds: Dictionary containing the parent_ids as keys and their
+            embeddings as values.
+        child_embeds: Dictionary containing the child_ids as keys and their
+            embeddings as values.
+        show_progress: A Bool representing whether we show the progress of
+            the function or not.
+
+    Returns:
+        Dictionary containing the parent_ids as keys, and a List of the closest
+        child_ids to them in the embedding space as values.
+    """
+    # Check if we have at least a Parent Dictionary.
+    if len(parent_embeds) == 0:
+        return {}
+
+    # Progress Variables.
+    count = 0
+    total = len(child_embeds)
+
+    # Iterate through each of the children and assign them to their closest parent.
+    parent_child_dict = {}
+    for child_id, child_embed in child_embeds.items():
+        # Find the closest parent to the child.
+        parent_id, similarity = closest_vector(child_embed, parent_embeds)
+        # Check if we have found this parent before.
+        if parent_id in parent_child_dict:
+            parent_child_dict[parent_id].append((child_id, similarity))
+        else:
+            parent_child_dict[parent_id] = [(child_id, similarity)]
+        # Show Progress.
+        if show_progress:
+            count += 1
+            progress_bar(count, total)
+
+    # Sort Children's List by their similarity to their parents.
+    for tuples_child_sim in parent_child_dict.values():
+        tuples_child_sim.sort(key=lambda child_sim: child_sim[1], reverse=True)
+    return parent_child_dict
 
 
 def cosine_similarity(a: np.ndarray, b: np.ndarray):
