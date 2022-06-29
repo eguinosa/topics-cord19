@@ -485,7 +485,7 @@ if __name__ == '__main__':
 
     # Getting the text of one of the papers.
     print(f"\nGetting the content of the Paper <{rand_cord_uid}>...")
-    result = cord19_papers.paper_content(rand_cord_uid)
+    result = cord19_papers.formatted_paper_content(rand_cord_uid)
     # Trim the size of the paper's content.
     if len(result) > 1_500:
         result = result[:1_500] + '...'
