@@ -1,7 +1,8 @@
 # Gelin Eguinosa Rosique
 
 import json
-from os.path import join, isfile
+from os import mkdir
+from os.path import isdir, join, isfile
 from random import sample
 
 from papers import Papers
@@ -19,6 +20,7 @@ class PapersAnalyzer:
     """
     # Class Data Locations
     data_folder = 'project_data'
+    analyzer_folder = 'papers_classification'
     small_papers_index = 'papers_index_small.json'
     medium_papers_index = 'papers_index_medium.json'
     big_papers_index = 'papers_index_big.json'
@@ -35,16 +37,20 @@ class PapersAnalyzer:
             show_progress: Bool representing whether we show the progress of
                 the function or not.
         """
+        # Check the data folders exist.
+        if not isdir(self.data_folder):
+            mkdir(self.data_folder)
+        analyzer_folder_path = join(self.data_folder, self.analyzer_folder)
+        if not isdir(analyzer_folder_path):
+            mkdir(analyzer_folder_path)
+
         # Get the CORD-19 papers.
         self.cord19_papers = Papers(show_progress=show_progress)
-        
-        # ...no need to check for the data folder, because Papers() will create
-        # one if it doesn't exist.
-        
+
         # Create the paths for the indexes of the new paper groups.
-        small_papers_path = join(self.data_folder, self.small_papers_index)
-        medium_papers_path = join(self.data_folder, self.medium_papers_index)
-        big_papers_path = join(self.data_folder, self.big_papers_index)
+        small_papers_path = join(analyzer_folder_path, self.small_papers_index)
+        medium_papers_path = join(analyzer_folder_path, self.medium_papers_index)
+        big_papers_path = join(analyzer_folder_path, self.big_papers_index)
         
         # Check if the indexes for the small, medium, big papers were already
         # created.
@@ -117,13 +123,12 @@ class PapersAnalyzer:
             paper_size = len(paper_content)
 
             # Assign the paper to one of the indexes.
-            paper_dict = {'cord_uid': paper_cord_uid, 'size': paper_size}
             if paper_size <= 300:
-                small_papers[paper_cord_uid] = paper_dict
+                small_papers[paper_cord_uid] = paper_size
             elif paper_size <= 3_000:
-                medium_papers[paper_cord_uid] = paper_dict
+                medium_papers[paper_cord_uid] = paper_size
             else:
-                big_papers[paper_cord_uid] = paper_dict
+                big_papers[paper_cord_uid] = paper_size
 
             # Show Progress if required.
             count += 1
