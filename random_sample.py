@@ -299,15 +299,16 @@ if __name__ == '__main__':
     # print(f"[{stopwatch.formatted_runtime()}]")
 
     # # -- Test the extraction of the content of the papers --
-    # # my_sample = RandomSample(paper_type='big', sample_size=5, show_progress=True)
-    # my_sample = RandomSample.load(show_progress=True)
+    # my_sample = RandomSample(paper_type='big', sample_size=5, show_progress=True)
+    # # my_sample = RandomSample.load(show_progress=True)
     #
     # for paper_id in my_sample.papers_cord_uids():
     #     paper_content = my_sample.formatted_paper_content(paper_id)
     #     print(f"\nThe Content of the paper <{paper_id}>:")
     #     print("-----------------------------------------")
-    #     if len(paper_content) >= 2_000:
-    #         paper_content = paper_content[:2_000] + '...[continues]...'
+    #     max_length = 2_500
+    #     if len(paper_content) >= max_length:
+    #         paper_content = paper_content[:max_length] + '...[continues]...'
     #     print(paper_content)
     #     user_input = input("\ntype q/quit to exit otherwise continue: ")
     #     if user_input in {'q', 'quit', 'exit'}:
