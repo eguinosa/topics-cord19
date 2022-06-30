@@ -262,14 +262,18 @@ class TopicModel:
         count = 0
         total = current_num_topics - number_topics
         # Perform topic reduction until we get the desired number of topics
+        if show_progress:
+            print(f"Reducing from {self.num_topics} to {number_topics} topics.")
         while number_topics < current_num_topics:
-            # Get the smallest topic.
+            # Get the smallest topic and its info.
             new_topics_list = list(new_topic_embeds.keys())
             min_topic_id = min(new_topics_list, key=lambda x: len(self.topic_docs[x]))
             min_embed = new_topic_embeds[min_topic_id]
 
+            # Delete Smallest Topic.
+            del new_topic_embeds[min_topic_id]
             # Get the closest topic to the small topic.
-            close_topic_id, _ = closest_vector(min_embed, self.topic_embeds)
+            close_topic_id, _ = closest_vector(min_embed, new_topic_embeds)
             close_embed = new_topic_embeds[close_topic_id]
 
             # Merge the embedding of the topics.
@@ -278,14 +282,12 @@ class TopicModel:
             total_size = min_size + close_size
             merged_topic_embed = (min_size * min_embed + close_size * close_embed) / total_size
 
-            # Delete Smallest Topic.
-            del new_topic_embeds[min_topic_id]
             # Update the Embedding of the closest Topic to the mean of them both.
             new_topic_embeds[close_topic_id] = merged_topic_embed
             # Update Document Count per Topic.
             new_topic_sizes = self._topic_document_count(new_topic_embeds)
             # Update Current Number of Topics.
-            current_num_topics -= 1
+            current_num_topics = len(new_topic_embeds)
 
             # Show progress.
             if show_progress:
@@ -300,15 +302,22 @@ class TopicModel:
                                       for new_id, topic_embed
                                       in enumerate(new_topic_embeds.values())])
         # Assign Words and Documents to the New Topics.
+        if show_progress:
+            print("Organizing documents using the New Topics...")
         self.new_topic_docs = find_child_embeddings(self.new_topic_embeds,
                                                     self.doc_embeds,
                                                     show_progress=show_progress)
+        if show_progress:
+            print("Creating the vocabulary for the New Topics...")
         self.new_topic_words = find_child_embeddings(self.new_topic_embeds,
                                                      self.word_embeds,
                                                      show_progress=show_progress)
         # Assign Original Topics to the New Topics.
+        if show_progress:
+            print("Assigning original topics to the New topics...")
         self.topics_hierarchy = find_child_embeddings(self.new_topic_embeds,
-                                                      self.topic_embeds)
+                                                      self.topic_embeds,
+                                                      show_progress=show_progress)
 
     def top_topics(self, show_originals=False):
         """
@@ -729,7 +738,7 @@ def closest_vector(embedding, vectors_dict: dict):
 
 
 def find_child_embeddings(parent_embeds: dict, child_embeds: dict,
-                          show_progress=True):
+                          show_progress=False):
     """
     Given a 'parent_embeds' embeddings dictionary and a 'child_embeds'
     embeddings dictionary, create a new dictionary assigning each of the
