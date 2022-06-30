@@ -26,9 +26,10 @@ class Papers(CorpusCord19):
 
     # Project Data Location
     project_data_folder = 'project_data'
-    project_embeds_folder = 'embedding_dicts'
+    papers_data_folder = 'papers_data'
+    project_embeds_folder = 'papers_embedding_dicts'
     papers_index_file = 'papers_index.json'
-    embeds_index_file = 'embeddings_index.json'
+    embeds_index_file = 'papers_embeddings_index.json'
 
     def __init__(self, show_progress=False):
         """
@@ -43,11 +44,15 @@ class Papers(CorpusCord19):
             show_progress: Bool representing whether we show the progress of
                 the function or not.
         """
-        # Create a data folder if it doesn't exist.
+        # Create the data folders if they don't exist.
         if not isdir(self.project_data_folder):
             mkdir(self.project_data_folder)
+        class_data_path = join(self.project_data_folder, self.papers_data_folder)
+        if not isdir(class_data_path):
+            mkdir(class_data_path)
+
         # Form the papers index path.
-        papers_index_path = join(self.project_data_folder, self.papers_index_file)
+        papers_index_path = join(class_data_path, self.papers_index_file)
         # Check if the papers' index exists or not.
         if isfile(papers_index_path):
             # Load the Papers' Index.
@@ -69,11 +74,12 @@ class Papers(CorpusCord19):
                 json.dump(self.papers_index, file)
 
         # Create the folder of the embedding dictionaries if it doesn't exist.
-        proj_embeds_folder_path = join(self.project_data_folder, self.project_embeds_folder)
+        proj_embeds_folder_path = join(class_data_path, self.project_embeds_folder)
         if not isdir(proj_embeds_folder_path):
             mkdir(proj_embeds_folder_path)
+
         # Form the embeddings index path.
-        embeds_index_path = join(self.project_data_folder, self.embeds_index_file)
+        embeds_index_path = join(class_data_path, self.embeds_index_file)
         # Check if the embeddings' index exists or not.
         if isfile(embeds_index_path):
             # Load the embeddings' index.
@@ -232,7 +238,10 @@ class Papers(CorpusCord19):
                 # Check if we have reached the maximum amount of papers per dict.
                 if dict_embeds_count >= embeds_per_dict:
                     # Save the current temporary dictionary
-                    temp_dict_path = join(self.project_data_folder, self.project_embeds_folder, temp_dict_file)
+                    dict_folder_path = join(self.project_data_folder,
+                                            self.papers_data_folder,
+                                            self.project_embeds_folder)
+                    temp_dict_path = join(dict_folder_path, temp_dict_file)
                     with open(temp_dict_path, 'w') as file:
                         json.dump(temp_embeds_dict, file)
 
@@ -251,7 +260,10 @@ class Papers(CorpusCord19):
         # the CSV file.
         if temp_embeds_dict:
             # Save the current temporary dictionary
-            temp_dict_path = join(self.project_data_folder, self.project_embeds_folder, temp_dict_file)
+            dict_folder_path = join(self.project_data_folder,
+                                    self.papers_data_folder,
+                                    self.project_embeds_folder)
+            temp_dict_path = join(dict_folder_path, temp_dict_file)
             with open(temp_dict_path, 'w') as file:
                 json.dump(temp_embeds_dict, file)
 
@@ -358,7 +370,10 @@ class Papers(CorpusCord19):
         # Check if this dictionary is already in memory.
         if embed_dict_filename != self.cached_dict_filename:
             # If the needed dict is not in memory, load it.
-            embed_dict_path = join(self.project_data_folder, self.project_embeds_folder, embed_dict_filename)
+            dict_folder_path = join(self.project_data_folder,
+                                    self.papers_data_folder,
+                                    self.project_embeds_folder)
+            embed_dict_path = join(dict_folder_path, embed_dict_filename)
             with open(embed_dict_path, 'r') as file:
                 # Update the cached dictionary.
                 self.cached_embed_dict = json.load(file)
