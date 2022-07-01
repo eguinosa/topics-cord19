@@ -1,6 +1,6 @@
 # Gelin Eguinosa Rosique
 
-from os import mkdir
+from os import mkdir, listdir
 from os.path import isdir, isfile, join
 from gensim.models import doc2vec
 
@@ -20,11 +20,11 @@ class Doc2VecCord19(DocumentModel):
     """
     # Class Data Locations.
     data_folder = 'project_data'
-    model_folder = 'doc2vec_models'
-    doc2vec_model_file = 'doc2vec_model_default'
-    doc2vec_model_prefix = 'doc2vec_model_'
-    word2vec_model_file = 'word2vec_model_default'
-    word2vec_model_prefix = 'word2vec_model_'
+    class_data_folder = 'doc2vec_models'
+    model_folder_prefix = 'model_'
+    doc2vec_model_prefix = 'doc2vec_'
+    word2vec_model_prefix = 'word2vec_'
+    default_model_id = 'default'
 
     def __init__(self, corpus: CorpusCord19 = None, vector_dims=100,
                  use_title_abstract=False, show_progress=False,
@@ -53,18 +53,24 @@ class Doc2VecCord19(DocumentModel):
         if not isdir(self.data_folder):
             mkdir(self.data_folder)
         # Create Model Folder if it doesn't exist.
-        model_folder_path = join(self.data_folder, self.model_folder)
-        if not isdir(model_folder_path):
-            mkdir(model_folder_path)
+        class_folder_path = join(self.data_folder, self.class_data_folder)
+        if not isdir(class_folder_path):
+            mkdir(class_folder_path)
 
         if _use_saved:
-            # Get the Doc2Vec file we are loading.
+            # Create filename of the model we are loading.
             if _saved_id:
-                doc2vec_model_name = self.doc2vec_model_prefix + _saved_id
-                doc2vec_model_path = join(model_folder_path, doc2vec_model_name)
+                model_folder_name = self.model_folder_prefix + _saved_id
+                doc2vec_filename = self.doc2vec_model_prefix + _saved_id
             else:
-                doc2vec_model_path = join(model_folder_path, self.doc2vec_model_file)
-            # Check the file exists.
+                model_folder_name = self.model_folder_prefix + self.default_model_id
+                doc2vec_filename = self.doc2vec_model_prefix + self.default_model_id
+
+            # Check the model is properly saved.
+            model_folder_path = join(class_folder_path, model_folder_name)
+            doc2vec_model_path = join(model_folder_path, doc2vec_filename)
+            if not isdir(model_folder_path):
+                raise NameError("The folder of the Doc2Vec model does not exist.")
             if not isfile(doc2vec_model_path):
                 raise NameError("The Doc2Vec model file doesn't exist.")
 
@@ -105,9 +111,17 @@ class Doc2VecCord19(DocumentModel):
             # Get the Word2Vec model.
             self.word2vec_model = self.doc2vec_model.wv
 
+            # Creating Model File & Folder Name.
+            model_folder_name = self.model_folder_prefix + self.default_model_id
+            doc2vec_filename = self.doc2vec_model_prefix + self.default_model_id
+            word2vec_filename = self.word2vec_model_prefix + self.default_model_id
+            # Create Model Folder.
+            model_folder_path = join(class_folder_path, model_folder_name)
+            if not isdir(model_folder_path):
+                mkdir(model_folder_path)
             # Save Doc2Vec & Word2Vec Model.
-            doc2vec_model_path = join(model_folder_path, self.doc2vec_model_file)
-            word2vec_model_path = join(model_folder_path, self.word2vec_model_file)
+            doc2vec_model_path = join(model_folder_path, doc2vec_filename)
+            word2vec_model_path = join(model_folder_path, word2vec_filename)
             self.doc2vec_model.save(doc2vec_model_path)
             self.word2vec_model.save(word2vec_model_path)
 
@@ -160,14 +174,19 @@ class Doc2VecCord19(DocumentModel):
         Args:
             model_id: The Identifier add to the model filename.
         """
-        # Create files' paths.
-        model_folder_path = join(self.data_folder, self.model_folder)
-        doc2vec_model_name = self.doc2vec_model_prefix + model_id
-        word2vec_model_name = self.word2vec_model_prefix + model_id
-        doc2vec_model_path = join(model_folder_path, doc2vec_model_name)
-        word2vec_model_path = join(model_folder_path, word2vec_model_name)
+        # Creating Model File & Folder Name.
+        model_folder_name = self.model_folder_prefix + model_id
+        doc2vec_filename = self.doc2vec_model_prefix + model_id
+        word2vec_filename = self.word2vec_model_prefix + model_id
+
+        # Create Model Folder.
+        model_folder_path = join(self.data_folder, self.class_data_folder, model_folder_name)
+        if not isdir(model_folder_path):
+            mkdir(model_folder_path)
 
         # Save Doc2Vec & Word2Vec Model.
+        doc2vec_model_path = join(model_folder_path, doc2vec_filename)
+        word2vec_model_path = join(model_folder_path, word2vec_filename)
         self.doc2vec_model.save(doc2vec_model_path)
         self.word2vec_model.save(word2vec_model_path)
 
@@ -192,6 +211,36 @@ class Doc2VecCord19(DocumentModel):
         return new_doc2vec_model
 
     @classmethod
+    def saved_models(cls):
+        """
+        Create a list with the IDs of all the Doc2Vec models saved.
+
+        Returns: List[str] with the IDs of the models.
+        """
+        # Check if the Project Folder exists.
+        if not isdir(cls.data_folder):
+            return []
+        # Check if the Class Folder exists.
+        class_folder_path = join(cls.data_folder, cls.class_data_folder)
+        if not isdir(class_folder_path):
+            return []
+
+        # Find all the available Model Folders.
+        models_ids = []
+        for element_name in listdir(class_folder_path):
+            element_path = join(class_folder_path, element_name)
+            if not isdir(element_path):
+                continue
+            if not element_name.startswith(cls.model_folder_prefix):
+                continue
+            prefix_len = len(cls.model_folder_prefix)
+            new_model_id = element_name[prefix_len:]
+            models_ids.append(new_model_id)
+
+        # The IDs of the saved Doc2Vec Models.
+        return models_ids
+
+    @classmethod
     def model_saved(cls, model_id=None):
         """
         Check if there is a Doc2Vec model saved.
@@ -207,21 +256,30 @@ class Doc2VecCord19(DocumentModel):
         # Create Project Folder if it doesn't exist.
         if not isdir(cls.data_folder):
             mkdir(cls.data_folder)
-        # Create Model Folder if it doesn't exist.
-        model_folder_path = join(cls.data_folder, cls.model_folder)
-        if not isdir(model_folder_path):
-            mkdir(model_folder_path)
+        # Create Class Folder if it doesn't exist.
+        class_folder_path = join(cls.data_folder, cls.class_data_folder)
+        if not isdir(class_folder_path):
+            mkdir(class_folder_path)
 
-        # Create file path.
+        # Create the Model's Folder & File name.
         if model_id:
-            doc2vec_model_name = cls.doc2vec_model_prefix + model_id
-            doc2vec_model_path = join(model_folder_path, doc2vec_model_name)
+            model_folder_name = cls.model_folder_prefix + model_id
+            doc2vec_filename = cls.doc2vec_model_prefix + model_id
         else:
-            doc2vec_model_path = join(model_folder_path, cls.doc2vec_model_file)
+            model_folder_name = cls.model_folder_prefix + cls.default_model_id
+            doc2vec_filename = cls.doc2vec_model_prefix + cls.default_model_id
 
-        # Check if the file exists.
-        result = isfile(doc2vec_model_path)
-        return result
+        # Check if the Model's Folder exists.
+        model_folder_path = join(class_folder_path, model_folder_name)
+        if not isdir(model_folder_path):
+            return False
+        # Check if the Model's File exists.
+        doc2vec_model_path = join(model_folder_path, doc2vec_filename)
+        if not isdir(doc2vec_model_path):
+            return False
+
+        # All Good.
+        return True
 
 
 if __name__ == '__main__':
@@ -269,9 +327,22 @@ if __name__ == '__main__':
         print(the_word_vector)
         print(f"Type: {type(the_word_vector)}")
 
-    # print("\nTesting loading Doc2Vec model...")
-    # print("Loading model...")
-    # next_doc2vec = Doc2VecCord19.load(show_progress=True)
+    # Save Model.
+    new_input = input("Do you want to save this model? (yes/[no]) ")
+    new_input = new_input.strip().lower()
+    if new_input in {'y', 'yes'}:
+        new_name = input("Type the name of the model: ")
+        new_name = new_name.strip().lower()
+        doc_model.save_model(model_id=new_name)
+
+    # # --- Test Loading Saved Models ---
+    # print("\nSaved Models:")
+    # the_saved_models = Doc2VecCord19.saved_models()
+    # print(the_saved_models)
+    #
+    # the_model_name = 'default'
+    # print(f"\nLoading Model <{the_model_name}>...")
+    # next_doc2vec = Doc2VecCord19.load(model_id=the_model_name, show_progress=True)
     # print("Done.")
     # print(f"[{stopwatch.formatted_runtime()}]")
     #
@@ -279,7 +350,7 @@ if __name__ == '__main__':
     # for index, doc_word in enumerate(next_doc2vec.word2vec_model.index_to_key):
     #     if index == 20:
     #         break
-    #     print(f"word #{index}/{len(doc_model.word2vec_model.index_to_key)} is {doc_word}")
+    #     print(f"word #{index}/{len(next_doc2vec.word2vec_model.index_to_key)} is {doc_word}")
     #
     # test_word = 'virus'
     # print(f"\nShow most similar words to '{test_word}' in loaded Model:")
