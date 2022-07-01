@@ -167,19 +167,15 @@ class TopicModel:
             self.topics_hierarchy = None
         else:
             # -- Create Topic Model --
-            # Load CORD-19 Corpus.
-            if corpus:
-                self.corpus = corpus
-            else:
-                self.corpus = Papers()
-            self.corpus_ids = self.corpus.papers_cord_uids()
+            # Make sure we have a CORD-19 Corpus.
+            if not corpus:
+                corpus = Papers()
+            self.corpus_ids = corpus.papers_cord_uids()
 
-            # Load Document Model.
-            if doc_model:
-                self.doc_model = doc_model
-            else:
-                self.doc_model = BertCord19()
-            self.model_type = self.doc_model.model_type()
+            # Check we have a Document Model.
+            if not doc_model:
+                doc_model = BertCord19()
+            self.model_type = doc_model.model_type()
 
             # Save if we are only using the Title and Abstract of the Papers.
             self.use_title_abstract = only_title_abstract
@@ -191,10 +187,10 @@ class TopicModel:
             # Calculate the embeddings of the words and documents.
             if show_progress:
                 print("Creating Word Embeddings...")
-            self.word_embeds = self._create_word_embeddings(show_progress=show_progress)
+            self.word_embeds = self._create_word_embeddings(corpus, doc_model, show_progress=show_progress)
             if show_progress:
                 print("Creating Document Embeddings...")
-            self.doc_embeds = self._create_docs_embeddings(show_progress=show_progress)
+            self.doc_embeds = self._create_docs_embeddings(corpus, doc_model, show_progress=show_progress)
             if show_progress:
                 print("Finding Topics...")
             self.topic_embeds = self._find_topics(show_progress=show_progress)
@@ -411,11 +407,16 @@ class TopicModel:
         # Per topic, a list with the words and their similarity to the topic.
         return topics_top_words
 
-    def _create_word_embeddings(self, show_progress=False):
+    def _create_word_embeddings(self, corpus: CorpusCord19,
+                                doc_model: DocumentModel, show_progress=False):
         """
         Create a dictionary with all the words in the corpus and their embeddings.
 
         Args:
+            corpus: A Cord-19 Corpus class with the selection of papers in the
+                corpus.
+            doc_model: A Document Model class used to get the embeddings of the
+                words in the corpus.
             show_progress: A Bool representing whether we show the progress of
                 the function or not.
 
@@ -428,9 +429,9 @@ class TopicModel:
 
         # Check if we are only using Title & Abstract or the whole papers' content.
         if self.use_title_abstract:
-            content_provider = self.corpus.all_papers_title_abstract()
+            content_provider = corpus.all_papers_title_abstract()
         else:
-            content_provider = self.corpus.all_papers_content()
+            content_provider = corpus.all_papers_content()
 
         # Create the vocabulary using the tokens from the Corpus' Content.
         words_embeddings = {}
@@ -439,7 +440,7 @@ class TopicModel:
             # Add the new words from the document.
             for doc_word in doc_tokens:
                 if doc_word not in words_embeddings:
-                    word_embed = self.doc_model.word_vector(doc_word)
+                    word_embed = doc_model.word_vector(doc_word)
                     # Ignore words that the model can't encode (Zero Values).
                     if not np.any(word_embed):
                         continue
@@ -452,12 +453,17 @@ class TopicModel:
         # The dictionary of words with their embeddings.
         return words_embeddings
 
-    def _create_docs_embeddings(self, show_progress=False):
+    def _create_docs_embeddings(self, corpus: CorpusCord19,
+                                doc_model: DocumentModel, show_progress=False):
         """
         Calculate the embeddings of the documents using the specified Document
         Model.
 
         Args:
+            corpus: A Cord-19 Corpus class with the selection of papers in the
+                corpus.
+            doc_model: A Document Model class used to get the embeddings of the
+                documents in the corpus.
             show_progress: A Bool representing whether we show the progress of
                 the function or not.
 
@@ -474,15 +480,15 @@ class TopicModel:
             # Depending on the model, select the content of the paper to encode.
             if self.model_type == 'specter':
                 # Using the Specter Manager Now.
-                doc_embedding = self.doc_model.document_vector(cord_uid)
+                doc_embedding = doc_model.document_vector(cord_uid)
             elif self.use_title_abstract or self.model_type == 'bert':
                 # BERT has a length limit, use only title and abstract.
-                doc_content = self.corpus.paper_title_abstract(cord_uid)
-                doc_embedding = self.doc_model.document_vector(doc_content)
+                doc_content = corpus.paper_title_abstract(cord_uid)
+                doc_embedding = doc_model.document_vector(doc_content)
             elif self.model_type in {'doc2vec', 'glove'}:
                 # No text size or token count restrictions, use all text.
-                doc_content = self.corpus.paper_content(cord_uid)
-                doc_embedding = self.doc_model.document_vector(doc_content)
+                doc_content = corpus.paper_content(cord_uid)
+                doc_embedding = doc_model.document_vector(doc_content)
             else:
                 raise NameError(f"We don't support the Model<{self.model_type}> yet.")
 
@@ -810,8 +816,8 @@ if __name__ == '__main__':
     # Load Random Sample to use a limited amount of papers in CORD-19.
     test_size = 1_000
     print(f"\nLoading Random Sample of {big_number(test_size)} documents...")
-    # sample = RandomSample(paper_type='medium', sample_size=test_size, show_progress=True)
-    sample = RandomSample.load(show_progress=True)
+    sample = RandomSample(paper_type='medium', sample_size=test_size, show_progress=True)
+    # sample = RandomSample.load(show_progress=True)
     # Load RandomSample() saved with an id.
     # sample = RandomSample.load(sample_id='10000_docs', show_progress=True)
     print("Done.")
@@ -845,8 +851,8 @@ if __name__ == '__main__':
     print(f"[{stopwatch.formatted_runtime()}]")
 
     print("\nLoading Topic Model...")
-    # topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True, show_progress=True)
-    topic_model = TopicModel.load(show_progress=True)
+    topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True, show_progress=True)
+    # topic_model = TopicModel.load(show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
