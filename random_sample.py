@@ -2,7 +2,7 @@
 
 import json
 import random
-from os import mkdir
+from os import mkdir, listdir
 from os.path import join, isdir, isfile
 
 from corpus_cord19 import CorpusCord19
@@ -19,8 +19,8 @@ class RandomSample(CorpusCord19):
     # Class Data Locations
     data_folder = 'project_data'
     random_sample_folder = 'random_sample_files'
-    default_index_file = 'random_sample_index_default.json'
-    sample_index_prefix = 'random_sample_index_'
+    default_index_file = 'random_sample_default.json'
+    sample_index_prefix = 'random_sample_'
 
     def __init__(self, paper_type='all', sample_size=-1, show_progress=False,
                  _use_saved=False, _saved_id=None):
@@ -211,6 +211,36 @@ class RandomSample(CorpusCord19):
         saved_sample = cls(_use_saved=True, _saved_id=sample_id,
                            show_progress=show_progress)
         return saved_sample
+
+    @classmethod
+    def saved_samples(cls):
+        """
+        Create a list containing the IDs of the saved Random Samples.
+
+        Returns: List[string] with the saved samples' IDs.
+        """
+        # Check if the project folders exist.
+        if not isdir(cls.data_folder):
+            return []
+        sample_folder_path = join(cls.data_folder, cls.random_sample_folder)
+        if not isdir(sample_folder_path):
+            return []
+
+        # Find all the available IDs in the class folder.
+        samples_ids = []
+        for filename in listdir(sample_folder_path):
+            # Filter out invalid files.
+            if not filename.startswith(cls.sample_index_prefix):
+                continue
+            if not filename.endswith('.json'):
+                continue
+            prefix_len = len(cls.sample_index_prefix)
+            new_id = filename[prefix_len:-5]
+            # Valid ID name.
+            samples_ids.append(new_id)
+
+        # The IDs of the saved Samples.
+        return samples_ids
 
     @classmethod
     def sample_saved(cls, sample_id=None):
