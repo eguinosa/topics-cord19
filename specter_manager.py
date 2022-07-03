@@ -5,6 +5,7 @@ import numpy as np
 from os import mkdir
 from os.path import isdir, isfile, join
 from collections import deque
+# from random import sample
 
 from document_model import DocumentModel
 from papers import Papers
@@ -29,6 +30,12 @@ class SpecterManager(DocumentModel):
     vocab_index_file = 'vocab_fragment_embeds_index.json'
     papers_fragment_prefix = 'papers_fragment_'
     vocab_fragment_prefix = 'vocabulary_fragment_'
+
+    # Attributes for Fragment Embedding's Dictionaries.
+    paper_fragments_number = 500
+    vocab_fragments_number = 500
+    paper_cache_size = 50
+    vocab_cache_size = 50
 
     def __init__(self, load_full_dicts=False, show_progress=False):
         """
@@ -100,13 +107,15 @@ class SpecterManager(DocumentModel):
         else:
             # Load & Save Papers' Embeddings.
             if show_progress:
-                print("Loading Papers' embeddings...")
+                print("Creating instance of Papers() class...")
             corpus = Papers(show_progress=show_progress)
             papers_ids = list(corpus.papers_cord_uids())
+            # Create dictionary with all the Paper's embeddings.
+            if show_progress:
+                print("Loading paper's embeddings using Papers() class...")
             # Progress Variables.
             count = 0
             total = len(papers_ids)
-            # Create dictionary with all the Paper's embeddings.
             paper_embeds = {}
             for paper_id in papers_ids:
                 paper_embeds[paper_id] = corpus.paper_embedding(paper_id)
@@ -116,14 +125,17 @@ class SpecterManager(DocumentModel):
 
             # Save full dictionary with Paper's embeddings.
             if show_progress:
-                print("Saving Papers' embeddings...")
+                print("Saving Full Dictionary with the paper's embeddings...")
             paper_embeds_path = join(class_folder_path, self.papers_embeds_file)
             with open(paper_embeds_path, 'w') as f:
                 json.dump(paper_embeds, f)
             # Save Paper's embeddings in fragments.
-            paper_fragments_index = create_embeddings_index(paper_embeds,
-                                                            papers_folder_path,
-                                                            self.papers_fragment_prefix,
+            if show_progress:
+                print("Creating Index & Fragments of the paper's embeddings...")
+            paper_fragments_index = create_embeddings_index(embeds_dict=paper_embeds,
+                                                            folder_path=papers_folder_path,
+                                                            file_prefix=self.papers_fragment_prefix,
+                                                            fragments_num=self.paper_fragments_number,
                                                             show_progress=show_progress)
             # Save Paper's Fragments Index.
             papers_index_path = join(class_folder_path, self.papers_index_file)
@@ -132,22 +144,25 @@ class SpecterManager(DocumentModel):
 
             # Load & Save Vocabulary Embeddings.
             if show_progress:
-                print("Loading Vocabulary's embeddings...")
+                print("Loading the vocabulary's embeddings...")
             vocab_embeds = load_vocab_embeddings(embeds_title_abstract)
             # Save Full Dictionary with Vocabulary Embeddings.
             if show_progress:
-                print("Saving Vocabulary's embeddings...")
+                print("Saving Full Dictionary of the vocabulary's embeddings...")
             vocab_embeds_path = join(class_folder_path, self.vocab_embeds_file)
             with open(vocab_embeds_path, 'w') as f:
                 json.dump(vocab_embeds, f)
             # Save Vocabulary's Embeddings in Fragments.
-            vocab_fragments_index = create_embeddings_index(vocab_embeds,
-                                                            vocab_folder_path,
-                                                            self.vocab_fragment_prefix,
+            if show_progress:
+                print("Saving Index & Fragments of the vocabulary's embeddings...")
+            vocab_fragments_index = create_embeddings_index(embeds_dict=vocab_embeds,
+                                                            folder_path=vocab_folder_path,
+                                                            file_prefix=self.vocab_fragment_prefix,
+                                                            fragments_num=self.vocab_fragments_number,
                                                             show_progress=show_progress)
             # Save Vocabulary's Fragments Index.
             vocab_index_path = join(class_folder_path, self.vocab_index_file)
-            with open(vocab_index_path, 'f') as f:
+            with open(vocab_index_path, 'w') as f:
                 json.dump(vocab_fragments_index, f)
 
         # Save the type of dicts we are going to use (Full/Fragmented)
@@ -160,8 +175,6 @@ class SpecterManager(DocumentModel):
             self.vocab_embeds_index = None
             self.paper_cached_dicts = None
             self.vocab_cached_dicts = None
-            self.paper_cache_size = None
-            self.vocab_cache_size = None
             self.paper_dict_queue = None
             self.vocab_dict_queue = None
         else:
@@ -173,8 +186,6 @@ class SpecterManager(DocumentModel):
             self.vocab_embeds_index = vocab_fragments_index
             self.paper_cached_dicts = {}
             self.vocab_cached_dicts = {}
-            self.paper_cache_size = 50
-            self.vocab_cache_size = 50
             self.paper_dict_queue = deque()
             self.vocab_dict_queue = deque()
 
@@ -304,10 +315,10 @@ class SpecterManager(DocumentModel):
         if not isfile(vocab_embeds_path):
             return False
         papers_index_path = join(class_folder_path, self.papers_index_file)
-        if not isdir(papers_index_path):
+        if not isfile(papers_index_path):
             return False
         vocab_index_path = join(class_folder_path, self.vocab_index_file)
-        if not isdir(vocab_index_path):
+        if not isfile(vocab_index_path):
             return False
 
         # All files checked and ready.
@@ -338,7 +349,7 @@ def create_embeddings_index(embeds_dict: dict, folder_path: str, file_prefix: st
             in the fragments.
     """
     # Check we don't have more fragments and available embeddings.
-    total_embeds = len(dict)
+    total_embeds = len(embeds_dict)
     if fragments_num > total_embeds:
         num_fragments = total_embeds
     else:
@@ -411,6 +422,28 @@ if __name__ == '__main__':
         print(f"Specter embedding of paper <{input_id}>:")
         print(the_paper_embed)
         print(f"Type: {type(the_paper_embed)}")
+
+    # # Testing cache size.
+    # # Vocabulary's Embeddings.
+    # iter_count = 0
+    # vocab_list = sample(list(the_manager.vocab_embeds_index), 75)
+    # for the_word in vocab_list:
+    #     the_embed = the_manager.word_vector(the_word)
+    #     print(f"Specter embedding of <{the_word}>:")
+    #     print(the_embed)
+    #     print(f"Type {type(the_embed)}")
+    #     iter_count += 1
+    #     print("Iteration:", iter_count)
+    # # Paper's Embeddings.
+    # iter_count = 0
+    # paper_ids = sample(list(the_manager.paper_embeds_index), 75)
+    # for the_id in paper_ids:
+    #     the_paper_embed = the_manager.document_vector(the_id)
+    #     print(f"Specter embedding of paper <{the_id}>:")
+    #     print(the_paper_embed)
+    #     print(f"Type: {type(the_paper_embed)}")
+    #     iter_count += 1
+    #     print("Iteration:", iter_count)
 
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]\n")
