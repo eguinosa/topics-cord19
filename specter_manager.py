@@ -34,8 +34,8 @@ class SpecterManager(DocumentModel):
     # Attributes for Fragment Embedding's Dictionaries.
     paper_fragments_number = 500
     vocab_fragments_number = 500
-    paper_cache_size = 50
-    vocab_cache_size = 50
+    paper_cache_size = 500
+    vocab_cache_size = 500
 
     def __init__(self, load_full_dicts=False, show_progress=False):
         """
@@ -388,6 +388,11 @@ def create_embeddings_index(embeds_dict: dict, folder_path: str, file_prefix: st
         if show_progress:
             count += 1
             progress_bar(count, total)
+    # Save the last fragment created, if it has unsaved embeddings.
+    if fragment_dict:
+        fragment_path = join(folder_path, fragment_filename)
+        with open(fragment_path, 'w') as f:
+            json.dump(fragment_dict, f)
 
     # Index containing the embedding IDs and their fragments' filenames.
     return embeds_index
