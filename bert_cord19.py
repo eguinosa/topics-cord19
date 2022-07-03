@@ -193,18 +193,30 @@ if __name__ == '__main__':
 
     print(f"\nThe Model Type: {my_model.model_type()}")
 
-    print("\nTesting word similarities (To close use [q/quit]):")
-    quit_words = {'q', 'quit'}
+    # Test Word Embeddings:
     while True:
-        word1 = input("\nType the first word: ")
-        if word1 in quit_words:
+        word_input = input("Type a word (q/quit to close): ")
+        word_input = word_input.strip().lower()
+        if word_input in {'', 'q', 'quit'}:
             break
-        word2 = input("Type the second word: ")
-        if word2 in quit_words:
-            break
-        sim_words = util.cos_sim(my_model.word_vector(word1), my_model.word_vector(word2))[0][0]
-        print("The words similarity:")
-        print(sim_words)
+        word_embed = my_model.word_vector(word_input)
+        print(f"\nThe embedding of <{word_input}>:")
+        print(word_embed)
+        print(f"Type: {type(word_embed)}")
+
+    # Check Similarities between words.
+    # print("\nTesting word similarities (To close use [q/quit]):")
+    # quit_words = {'q', 'quit'}
+    # while True:
+    #     word1 = input("\nType the first word: ")
+    #     if word1 in quit_words:
+    #         break
+    #     word2 = input("Type the second word: ")
+    #     if word2 in quit_words:
+    #         break
+    #     sim_words = util.cos_sim(my_model.word_vector(word1), my_model.word_vector(word2))[0][0]
+    #     print("The words similarity:")
+    #     print(sim_words)
 
     print("\nDone.")
     print(f"[{stopwatch.formatted_runtime()}]\n")
