@@ -820,8 +820,7 @@ def save_cord19_topics():
 
     # Load Corpus.
     print("\nLoading the CORD-19 corpus...")
-    # topic_corpus = RandomSample(paper_type='medium', sample_size=1_000, show_progress=True)
-    topic_corpus = RandomSample.load(show_progress=True)  # Papers(show_progress=True)
+    topic_corpus = Papers(show_progress=True)
     print("Done.")
     print(f"[{time_record.formatted_runtime()}]")
     # Report Corpus size.
@@ -865,6 +864,26 @@ def save_cord19_topics():
     print(f"\n{topic_model.num_topics} topics found.")
     # Save Topic Model.
     topic_model_id = 'cord19_dataset_doc2vec_big'
+    print(f"\nSaving Topic Model with ID: {topic_model_id}")
+    topic_model.save(topic_model_id, show_progress=True)
+    print("Done.")
+    print(f"[{time_record.formatted_runtime()}]")
+
+    # Create Topic Model using Specter.
+    print("\nLoading SPECTER Model...")
+    doc_model = SpecterManager(load_full_dicts=True, show_progress=True)
+    print("Done.")
+    print(f"[{time_record.formatted_runtime()}]")
+    # Create Topic Model.
+    print("\nCreating Topic Model using SPECTER...")
+    topic_model = TopicModel(corpus=topic_corpus, doc_model=doc_model,
+                             only_title_abstract=True, show_progress=True)
+    print("Done.")
+    print(f"[{time_record.formatted_runtime()}]")
+    # Report Topics found.
+    print(f"\n{topic_model.num_topics} topics found.")
+    # Save Topic Model.
+    topic_model_id = 'cord19_dataset_specter'
     print(f"\nSaving Topic Model with ID: {topic_model_id}")
     topic_model.save(topic_model_id, show_progress=True)
     print("Done.")
@@ -949,26 +968,6 @@ def save_cord19_topics():
     print(f"\n{topic_model.num_topics} topics found.")
     # Save Topic Model.
     topic_model_id = 'cord19_dataset_bert_best'
-    print(f"\nSaving Topic Model with ID: {topic_model_id}")
-    topic_model.save(topic_model_id, show_progress=True)
-    print("Done.")
-    print(f"[{time_record.formatted_runtime()}]")
-
-    # Create Topic Model using Specter.
-    print("\nLoading SPECTER Model...")
-    doc_model = SpecterManager(load_full_dicts=True, show_progress=True)
-    print("Done.")
-    print(f"[{time_record.formatted_runtime()}]")
-    # Create Topic Model.
-    print("\nCreating Topic Model using SPECTER...")
-    topic_model = TopicModel(corpus=topic_corpus, doc_model=doc_model,
-                             only_title_abstract=True, show_progress=True)
-    print("Done.")
-    print(f"[{time_record.formatted_runtime()}]")
-    # Report Topics found.
-    print(f"\n{topic_model.num_topics} topics found.")
-    # Save Topic Model.
-    topic_model_id = 'cord19_dataset_specter'
     print(f"\nSaving Topic Model with ID: {topic_model_id}")
     topic_model.save(topic_model_id, show_progress=True)
     print("Done.")
