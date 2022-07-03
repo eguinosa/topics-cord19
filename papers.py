@@ -178,6 +178,8 @@ class Papers(CorpusCord19):
         We create an index with the 'cord_uid' of the papers and the location of
         the dictionary that contains them.
 
+        The maximum accepted value for 'embed_dicts' is 999.
+
         Args:
             embed_dicts: The number of dictionaries that we are going to use
                 to store all the embeddings of the papers (default: 100).
