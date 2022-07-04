@@ -27,7 +27,8 @@ class TopicModel:
     # Class Data Locations.
     data_folder = 'project_data'
     topic_models_folder = 'topic_models'
-    topic_model_prefix = 'topics_'  # + doc model + docs number + id
+    topic_model_prefix = 'topics_'
+    default_model_id = 'default'
     model_index_file = 'topic_model_index.json'
     word_embeds_file = 'topic_model_word_embeds.json'
     doc_embeds_file = 'topic_model_doc_embeds.json'
@@ -37,8 +38,8 @@ class TopicModel:
     supported_doc_models = ['doc2vec', 'glove', 'bert', 'specter']
 
     def __init__(self, corpus: CorpusCord19 = None, doc_model: DocumentModel = None,
-                 only_title_abstract=False, show_progress=False,
-                 _used_saved=False, _model_id=None):
+                 only_title_abstract=False, model_id=None, used_saved=False,
+                 show_progress=False):
         """
         Find the topics in the provided 'corpus' using 'doc_model' to get the
         embedding of the Documents and Words in the CORD-19 corpus selected.
@@ -55,13 +56,16 @@ class TopicModel:
             only_title_abstract: A Bool showing if we are going to use only the
                 Titles & Abstracts of the papers, or all their content to create
                 the vocabulary and the embeddings.
+            model_id: A string with the ID of a previously saved Topic Model.
+            used_saved: A Bool to know if we need to load the Topic Model from
+                a file or recalculate it.
             show_progress: Bool representing whether we show the progress of
                 the function or not.
-            _used_saved: A Bool to know if we need to load the Topic Model from
-                a file or recalculate it.
-            _model_id: A string with the ID of a previously saved Topic Model.
         """
-        if _used_saved:
+        # Save ID of the file of the Topic Model.
+        self.model_id = model_id if model_id else self.default_model_id
+
+        if used_saved:
             # -- Load Topic Model ---
             # Check if the data folders exist.
             if not isdir(self.data_folder):
@@ -71,10 +75,7 @@ class TopicModel:
                 raise FileNotFoundError("There is no Topic Model saved.")
 
             # Create folder path for this topic model.
-            if _model_id:
-                model_folder_id = self.topic_model_prefix + _model_id
-            else:
-                model_folder_id = self.topic_model_prefix + 'default'
+            model_folder_id = self.topic_model_prefix + self.model_id
             model_folder_path = join(topic_models_path, model_folder_id)
 
             # Load Index Dictionary for basic attributes.
@@ -612,8 +613,8 @@ class TopicModel:
         the 'model_id'.
 
         Args:
-            model_id: String with the ID we are using to identify the topic
-                model.
+            model_id: String with the ID we want to use to identify the file of
+                the topic model. Overrides the value of the Model's current ID.
             show_progress: A Bool representing whether we show the progress of
                 the function or not.
         """
@@ -632,7 +633,7 @@ class TopicModel:
         if model_id:
             model_folder_id = self.topic_model_prefix + model_id
         else:
-            model_folder_id = self.topic_model_prefix + 'default'
+            model_folder_id = self.topic_model_prefix + self.model_id
         model_folder_path = join(topic_models_path, model_folder_id)
         if not isdir(model_folder_path):
             mkdir(model_folder_path)
@@ -693,6 +694,29 @@ class TopicModel:
         with open(topic_index_path, 'w') as f:
             json.dump(topic_embeds_index, f)
 
+    def _save_reduced_topics(self, model_folder_path: str, show_progress=False):
+        """
+        Create a list of basic topic sizes between 2 and the size of the current
+        Topic Model, to create and save the Hierarchical Topic Models of this
+        Model with these sizes, so when we create a new Hierarchical Topic Model
+        we can do it faster, only having to start reducing the Topic sizes from
+        the closest basic topic size.
+
+        The saved topic sizes will be in the range of 2-1000, with different
+        steps depending on the Topic Size range.
+        - Step of  5 between  2 and 30.
+        - Step of 10 between 30 and 100.
+        - Step of 25 between 100 and 300.
+        - Step of 50 between 300 and 1000.
+
+        Args:
+            model_folder_path: String with the path to the folder were the
+                current Model's attributes are stored.
+            show_progress:  A Bool representing whether we show the progress of
+                the function or not.
+        """
+        pass
+
     @classmethod
     def load(cls, model_id: str = None, show_progress=False):
         """
@@ -706,7 +730,7 @@ class TopicModel:
         Returns:
             An instance of the TopicModel class.
         """
-        return cls(_used_saved=True, _model_id=model_id, show_progress=show_progress)
+        return cls(model_id=model_id, used_saved=True, show_progress=show_progress)
 
 
 def closest_vector(embedding, vectors_dict: dict):
