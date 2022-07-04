@@ -810,6 +810,45 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray):
     return result
 
 
+def topic_midway_sizes(original_size: int):
+    """
+    Create a list containing the topic sizes for whom we are going to save a
+    Hierarchically Reduced Topic Model to speed up the process of returning
+    a Topic Model when a user requests a custom size.
+
+    The Topic Sizes will have a different step depending on the range of topic
+    sizes:
+    - Step of  5 between  2 and 30.
+    - Step of 10 between 30 and 100.
+    - Step of 25 between 100 and 300.
+    - Step of 50 between 300 and 1000.
+
+    Example: 2, 5, 10, ..., 25, 30, 40,..., 90, 100, 125, ..., 275, 300, 350...
+
+    Args:
+        original_size: Int with the size of the original Topic Model.
+
+    Returns:
+        List of Int containing the topic sizes we have to save when generating
+            the reduced Topic Model.
+    """
+    # Check we don't have an Original Topic of size 2.
+    midway_sizes = []
+    if original_size > 2:
+        midway_sizes.append(2)
+    # Sizes between 5 and 30.
+    midway_sizes += range(5, min(30, original_size), 5)
+    # Sizes between 30 and 100.
+    midway_sizes += range(30, min(100, original_size), 10)
+    # Sizes between 100 and 300.
+    midway_sizes += range(100, min(300, original_size), 25)
+    # Sizes between 300 and 1000.
+    midway_sizes += range(300, min(1_001, original_size), 50)
+
+    # The Intermediate sizes to create a reference Hierarchical Topic Model.
+    return midway_sizes
+
+
 def save_cord19_topics():
     """
     Create and Save the Topic Models for the CORD-19 dataset using Bert, Doc2Vec
