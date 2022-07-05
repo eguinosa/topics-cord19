@@ -262,30 +262,10 @@ class TopicModel:
         if show_progress:
             print(f"Reducing from {self.num_topics} to {number_topics} topics.")
         while number_topics < current_num_topics:
-            # Get the smallest topic and its info.
-            new_topics_list = list(new_topic_embeds.keys())
-            min_topic_id = min(new_topics_list, key=lambda x: len(self.topic_docs[x]))
-            min_embed = new_topic_embeds[min_topic_id]
-
-            # Delete Smallest Topic.
-            del new_topic_embeds[min_topic_id]
-            # Get the closest topic to the small topic.
-            close_topic_id, _ = closest_vector(min_embed, new_topic_embeds)
-            close_embed = new_topic_embeds[close_topic_id]
-
-            # Merge the embedding of the topics.
-            min_size = new_topic_sizes[min_topic_id]
-            close_size = new_topic_sizes[close_topic_id]
-            total_size = min_size + close_size
-            merged_topic_embed = (min_size * min_embed + close_size * close_embed) / total_size
-
-            # Update the Embedding of the closest Topic to the mean of them both.
-            new_topic_embeds[close_topic_id] = merged_topic_embed
-            # Update Document Count per Topic.
-            new_topic_sizes = self._topic_document_count(new_topic_embeds)
+            # Reduce the number of topics by 1.
+            new_topic_embeds, new_topic_sizes = self._reduce_topic_size(new_topic_embeds, new_topic_sizes)
             # Update Current Number of Topics.
             current_num_topics = len(new_topic_embeds)
-
             # Show progress.
             if show_progress:
                 count += 1
@@ -315,6 +295,47 @@ class TopicModel:
         self.topics_hierarchy = find_child_embeddings(self.new_topic_embeds,
                                                       self.topic_embeds,
                                                       show_progress=show_progress)
+
+    def _reduce_topic_size(self, ref_topic_embeds: dict, topic_sizes: dict):
+        """
+        Reduce the provided Topics in 'ref_topic_embeds' by 1, mixing the
+        smallest topic with its closest neighbor.
+
+        Args:
+            ref_topic_embeds: Dictionary containing the embeddings of the topics
+                we are going to reduce. This dictionary is treated as a
+                reference and will be modified to store the new reduced topics.
+            topic_sizes: Dictionary containing the current size of the topics we
+                are reducing.
+
+        Returns:
+            Tuple with 'ref_topic_embeds' dictionary  and a new 'topic_sizes'
+                dictionary containing the updated embeddings and sizes
+                respectively for the new Topics.
+        """
+        # Get the smallest topic and its info.
+        new_topics_list = list(ref_topic_embeds.keys())
+        min_topic_id = min(new_topics_list, key=lambda x: len(self.topic_docs[x]))
+        min_embed = ref_topic_embeds[min_topic_id]
+
+        # Delete Smallest Topic.
+        del ref_topic_embeds[min_topic_id]
+        # Get the closest topic to the small topic.
+        close_topic_id, _ = closest_vector(min_embed, ref_topic_embeds)
+        close_embed = ref_topic_embeds[close_topic_id]
+
+        # Merge the embedding of the topics.
+        min_size = topic_sizes[min_topic_id]
+        close_size = topic_sizes[close_topic_id]
+        total_size = min_size + close_size
+        merged_topic_embed = (min_size * min_embed + close_size * close_embed) / total_size
+
+        # Update embedding of the closest topic.
+        ref_topic_embeds[close_topic_id] = merged_topic_embed
+        # Get the new topic sizes.
+        new_topic_sizes = self._topic_document_count(ref_topic_embeds)
+        # New Dictionaries with embeds and sizes.
+        return ref_topic_embeds, new_topic_sizes
 
     def top_topics(self, show_originals=False):
         """
@@ -715,7 +736,21 @@ class TopicModel:
             show_progress:  A Bool representing whether we show the progress of
                 the function or not.
         """
-        pass
+        # Check if we have a valid Folder Path:
+        if not isdir(model_folder_path):
+            raise NotADirectoryError("The provided Model Folder is not valid.")
+        # Check we can create a Reduced Topic Model.
+        if self.num_topics <= 2:
+            return
+
+        # Get a Set with the Reduced Topic Sizes that we have to save.
+        main_sizes = best_midway_sizes(self.num_topics)
+
+        # Initialize Topic Reduction Variables.
+        new_topic_embeds = self.topic_embeds.copy()
+        new_topic_sizes = dict([(topic_id, len(self.topic_docs[topic_id]))
+                                for topic_id in self.topic_docs.keys()])
+        # Not Done yet...
 
     @classmethod
     def load(cls, model_id: str = None, show_progress=False):
@@ -834,9 +869,9 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray):
     return result
 
 
-def topic_midway_sizes(original_size: int):
+def best_midway_sizes(original_size: int):
     """
-    Create a list containing the topic sizes for whom we are going to save a
+    Create a set containing the topic sizes for whom we are going to save a
     Hierarchically Reduced Topic Model to speed up the process of returning
     a Topic Model when a user requests a custom size.
 
@@ -853,21 +888,21 @@ def topic_midway_sizes(original_size: int):
         original_size: Int with the size of the original Topic Model.
 
     Returns:
-        List of Int containing the topic sizes we have to save when generating
-            the reduced Topic Model.
+        Set containing the Ints with the topic sizes we have to save when
+            generating the reduced Topic Model.
     """
     # Check we don't have an Original Topic of size 2.
-    midway_sizes = []
+    midway_sizes = set()
     if original_size > 2:
-        midway_sizes.append(2)
+        midway_sizes.add(2)
     # Sizes between 5 and 30.
-    midway_sizes += range(5, min(30, original_size), 5)
+    midway_sizes.add(range(5, min(30, original_size), 5))
     # Sizes between 30 and 100.
-    midway_sizes += range(30, min(100, original_size), 10)
+    midway_sizes.add(range(30, min(100, original_size), 10))
     # Sizes between 100 and 300.
-    midway_sizes += range(100, min(300, original_size), 25)
+    midway_sizes.add(range(100, min(300, original_size), 25))
     # Sizes between 300 and 1000.
-    midway_sizes += range(300, min(1_001, original_size), 50)
+    midway_sizes.add(range(300, min(1_001, original_size), 50))
 
     # The Intermediate sizes to create a reference Hierarchical Topic Model.
     return midway_sizes
