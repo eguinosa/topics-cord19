@@ -261,12 +261,14 @@ class TopicModel:
             with open(reduced_topic_path, 'r') as f:
                 reduced_topic_index = json.load(f)
             # Get the Reduced Topic's Sizes.
-            new_topic_sizes = reduced_topic_index['topic_sizes']
+            loaded_topic_sizes = reduced_topic_index['topic_sizes']
+            new_topic_sizes = dict([(int(key), size)
+                                    for key, size in loaded_topic_sizes.items()])
             # Get the Reduced Topic's Embeddings.
             json_topic_embeds = reduced_topic_index['topic_embeds']
             new_topic_embeds = {}
-            for topic_id, topic_embed in json_topic_embeds:
-                new_topic_embeds[topic_id] = topic_embed
+            for topic_id, topic_embed in json_topic_embeds.items():
+                new_topic_embeds[int(topic_id)] = np.array(topic_embed)
             # Update Current Topic Size.
             current_num_topics = len(new_topic_embeds)
 
@@ -1258,25 +1260,25 @@ if __name__ == '__main__':
     #     for word_sim in word_list:
     #         print(word_sim)
 
-    # # --Test Creating Hierarchically Reduced Topics--
-    # new_topics = 10
-    # print(f"\nCreating Topic Model with {new_topics} topics.")
-    # the_topic_model.generate_new_topics(number_topics=new_topics, show_progress=True)
-    # print("Done.")
-    # print(f"[{stopwatch.formatted_runtime()}]")
-    #
-    # print("\nNew Topics and Document count:")
-    # all_topics = the_topic_model.top_topics()
-    # for topic in all_topics:
-    #     print(topic)
-    #
-    # top_n = 15
-    # print(f"\nTop {top_n} words per new topic:")
-    # words_per_topic = the_topic_model.all_topics_top_words(top_n)
-    # for i, word_list in words_per_topic:
-    #     print(f"\n----> Topic <{i}>:")
-    #     for word_sim in word_list:
-    #         print(word_sim)
+    # --Test Creating Hierarchically Reduced Topics--
+    new_topics = 10
+    print(f"\nCreating Topic Model with {new_topics} topics.")
+    the_topic_model.generate_new_topics(number_topics=new_topics, show_progress=True)
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
+
+    print("\nNew Topics and Document count:")
+    all_topics = the_topic_model.top_topics()
+    for topic in all_topics:
+        print(topic)
+
+    top_n = 15
+    print(f"\nTop {top_n} words per new topic:")
+    words_per_topic = the_topic_model.all_topics_top_words(top_n)
+    for i, word_list in words_per_topic:
+        print(f"\n----> Topic <{i}>:")
+        for word_sim in word_list:
+            print(word_sim)
 
     print("\nDone.")
     print(f"[{stopwatch.formatted_runtime()}]\n")
