@@ -637,12 +637,19 @@ class TopicModel:
         Save the topic model. The saved Topic Model can be loaded later using
         the 'model_id'.
 
+        If a new 'model_id' is provided the ID of the current Topic Model is
+        updated.
+
         Args:
             model_id: String with the ID we want to use to identify the file of
                 the topic model. Overrides the value of the Model's current ID.
             show_progress: A Bool representing whether we show the progress of
                 the function or not.
         """
+        # Check if we need to update the ID of the Model.
+        if model_id:
+            self.model_id = model_id
+
         # Progress Variables.
         count = 0
         total = len(self.word_embeds) + len(self.doc_embeds) + len(self.topic_embeds)
@@ -653,13 +660,8 @@ class TopicModel:
         topic_models_path = join(self.data_folder, self.topic_models_folder)
         if not isdir(topic_models_path):
             mkdir(topic_models_path)
-
-        # Create folder for this topic model using ID or default.
-        if model_id:
-            model_folder_id = self.topic_model_prefix + model_id
-        else:
-            model_folder_id = self.topic_model_prefix + self.model_id
-        model_folder_path = join(topic_models_path, model_folder_id)
+        model_folder_name = self.topic_model_prefix + self.model_id
+        model_folder_path = join(topic_models_path, model_folder_name)
         if not isdir(model_folder_path):
             mkdir(model_folder_path)
 
@@ -787,7 +789,8 @@ class TopicModel:
                     'topic_sizes': new_topic_sizes,
                 }
                 # Save the index of the reduced topic.
-                reduced_topic_file = self.reduced_topic_prefix + str(current_num_topics)
+                reduced_topic_file = (self.reduced_topic_prefix
+                                      + str(current_num_topics) + '.json')
                 reduced_topic_path = join(reduced_folder_path, reduced_topic_file)
                 with open(reduced_topic_path, 'w') as f:
                     json.dump(reduced_topic_index, f)
@@ -796,6 +799,38 @@ class TopicModel:
             if show_progress:
                 count += 1
                 progress_bar(count, total)
+
+    def reduced_topics_saved(self):
+        """
+        Check if the main Hierarchically Reduced Topics were properly saved.
+
+        Returns: Bool showing if the Reduced Topic Models were saved.
+        """
+        # Check the Model's Folders.
+        if not isdir(self.data_folder):
+            return False
+        class_folder_path = join(self.data_folder, self.topic_models_folder)
+        if not isdir(class_folder_path):
+            return False
+        model_folder_name = self.topic_model_prefix + self.model_id
+        model_folder_path = join(class_folder_path, model_folder_name)
+        if not isdir(model_folder_path):
+            return False
+        reduced_folder_path = join(model_folder_path, self.reduced_topics_folder)
+        if not isdir(reduced_folder_path):
+            return False
+
+        # Check that all the Main Reduced Topic Models were saved.
+        main_sizes = best_midway_sizes(self.num_topics)
+        for topic_size in main_sizes:
+            # Check the file for the Reduced Model with the current size.
+            reduced_topic_file = self.reduced_topic_prefix + str(topic_size) + '.json'
+            reduced_topic_path = join(reduced_folder_path, reduced_topic_file)
+            if not isfile(reduced_topic_path):
+                return False
+
+        # All The Files were created correctly.
+        return True
 
     @classmethod
     def load(cls, model_id: str = None, show_progress=False):
