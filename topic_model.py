@@ -33,6 +33,8 @@ class TopicModel:
     word_embeds_file = 'topic_model_word_embeds.json'
     doc_embeds_file = 'topic_model_doc_embeds.json'
     topic_embeds_file = 'topic_model_topic_embeds.json'
+    reduced_topics_folder = 'reduced_topic_models'
+    reduced_topic_prefix = 'reduced_topic_model_'
 
     # The Doc Models available to use.
     supported_doc_models = ['doc2vec', 'glove', 'bert', 'specter']
@@ -263,7 +265,9 @@ class TopicModel:
             print(f"Reducing from {self.num_topics} to {number_topics} topics.")
         while number_topics < current_num_topics:
             # Reduce the number of topics by 1.
-            new_topic_embeds, new_topic_sizes = self._reduce_topic_size(new_topic_embeds, new_topic_sizes)
+            result_tuple = self._reduce_topic_size(ref_topic_embeds=new_topic_embeds,
+                                                   topic_sizes=new_topic_sizes)
+            new_topic_embeds, new_topic_sizes = result_tuple
             # Update Current Number of Topics.
             current_num_topics = len(new_topic_embeds)
             # Show progress.
@@ -743,14 +747,55 @@ class TopicModel:
         if self.num_topics <= 2:
             return
 
+        # Create Folder to store the hierarchically reduced topics.
+        reduced_folder_path = join(model_folder_path, self.reduced_topics_folder)
+        if not isdir(reduced_folder_path):
+            mkdir(reduced_folder_path)
+
         # Get a Set with the Reduced Topic Sizes that we have to save.
         main_sizes = best_midway_sizes(self.num_topics)
 
-        # Initialize Topic Reduction Variables.
+        # Initialize Topic Reduction dictionaries.
+        current_num_topics = self.num_topics
         new_topic_embeds = self.topic_embeds.copy()
         new_topic_sizes = dict([(topic_id, len(self.topic_docs[topic_id]))
                                 for topic_id in self.topic_docs.keys()])
-        # Not Done yet...
+
+        # Progress Variables.
+        count = 0
+        total = current_num_topics - 2
+        # Start Reducing Topics and Saving the Main Topic Sizes.
+        if show_progress:
+            print("Saving Main Hierarchically Reduced Topic Models...")
+        while current_num_topics > 2:
+            # Reduce number of topics by 1.
+            result_tuple = self._reduce_topic_size(ref_topic_embeds=new_topic_embeds,
+                                                   topic_sizes=new_topic_sizes)
+            new_topic_embeds, new_topic_sizes = result_tuple
+            # Update current number of topics.
+            current_num_topics = len(new_topic_embeds)
+
+            # Check if we need to save the current embeddings and sizes.
+            if current_num_topics in main_sizes:
+                # Transform Embeddings to lists.
+                json_topic_embeds = {}
+                for topic_id, topic_embed in new_topic_embeds:
+                    json_topic_embeds[topic_id] = topic_embed.tolist()
+                # Create Dict with embeddings and sizes.
+                reduced_topic_index = {
+                    'topic_embeds': json_topic_embeds,
+                    'topic_sizes': new_topic_sizes,
+                }
+                # Save the index of the reduced topic.
+                reduced_topic_file = self.reduced_topic_prefix + str(current_num_topics)
+                reduced_topic_path = join(reduced_folder_path, reduced_topic_file)
+                with open(reduced_topic_path, 'w') as f:
+                    json.dump(reduced_topic_index, f)
+
+            # Show Progress.
+            if show_progress:
+                count += 1
+                progress_bar(count, total)
 
     @classmethod
     def load(cls, model_id: str = None, show_progress=False):
