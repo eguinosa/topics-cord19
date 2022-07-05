@@ -248,21 +248,49 @@ class TopicModel:
             # Exit function.
             return
 
-        # Check if we can use previously calculated New Topics...
-        # [...Not Done Yet]
+        if self.reduced_topics_saved():
+            # Initialize New Topics Variables.
+            current_num_topics = self.num_topics
+            new_topic_embeds = self.topic_embeds.copy()
+            new_topic_sizes = dict([(topic_id, len(self.topic_docs[topic_id]))
+                                    for topic_id in self.topic_docs.keys()])
+        else:
+            # Get the closest viable Reduced Topic Size.
+            main_sizes = best_midway_sizes(self.num_topics)
+            usable_sizes = [size for size in main_sizes if size >= number_topics]
+            optimal_size = min(usable_sizes)
+            # Upload The Reduced Topic Model.
+            if show_progress:
+                print(f"Loading Reduced Topic Model with {optimal_size} topics...")
+            model_folder_name = self.topic_model_prefix + self.model_id
+            reduced_topic_file = self.reduced_topic_prefix + str(optimal_size) + '.json'
+            reduced_topic_path = join(self.data_folder, self.topic_models_folder,
+                                      model_folder_name, self.reduced_topics_folder,
+                                      reduced_topic_file)
+            with open(reduced_topic_path, 'r') as f:
+                reduced_topic_index = json.load(f)
+            # Get the Reduced Topic's Sizes.
+            new_topic_sizes = reduced_topic_index['topic_sizes']
+            # Get the Reduced Topic's Embeddings.
+            json_topic_embeds = reduced_topic_index['topic_embeds']
+            new_topic_embeds = {}
+            for topic_id, topic_embed in json_topic_embeds:
+                new_topic_embeds[topic_id] = topic_embed
+            # Update Current Topic Size.
+            current_num_topics = len(new_topic_embeds)
 
-        # Initialize New Topics Variables.
-        current_num_topics = self.num_topics
-        new_topic_embeds = self.topic_embeds.copy()
-        new_topic_sizes = dict([(topic_id, len(self.topic_docs[topic_id]))
-                                for topic_id in self.topic_docs.keys()])
-
+        # Perform topic reduction until we get the desired number of topics
+        if show_progress:
+            # Check that we are reducing times at least once.
+            if number_topics < current_num_topics:
+                print(f"Reducing from {current_num_topics} to {number_topics} topics...")
+            else:
+                print(f"No need to reduce the current {current_num_topics} topics.")
+                total = self.num_topics - current_num_topics
+                progress_bar(total, total)
         # Progress Variables.
         count = 0
         total = current_num_topics - number_topics
-        # Perform topic reduction until we get the desired number of topics
-        if show_progress:
-            print(f"Reducing from {self.num_topics} to {number_topics} topics.")
         while number_topics < current_num_topics:
             # Reduce the number of topics by 1.
             result_tuple = self._reduce_topic_size(ref_topic_embeds=new_topic_embeds,
