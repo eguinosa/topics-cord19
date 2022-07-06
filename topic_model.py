@@ -785,22 +785,25 @@ class TopicModel:
         new_topic_sizes = dict([(topic_id, len(self.topic_docs[topic_id]))
                                 for topic_id in self.topic_docs.keys()])
 
-        # Progress Variables.
-        count = 0
-        total = current_num_topics - 2
         # Start Reducing Topics and Saving the Main Topic Sizes.
         if show_progress:
             print("Saving Main Hierarchically Reduced Topic Models...")
         while current_num_topics > 2:
             # Reduce number of topics by 1.
+            if show_progress:
+                print(f"Reducing from {current_num_topics} to {current_num_topics - 1} topics...")
             result_tuple = self._reduce_topic_size(ref_topic_embeds=new_topic_embeds,
-                                                   topic_sizes=new_topic_sizes)
+                                                   topic_sizes=new_topic_sizes,
+                                                   show_progress=show_progress)
             new_topic_embeds, new_topic_sizes = result_tuple
             # Update current number of topics.
             current_num_topics = len(new_topic_embeds)
 
             # Check if we need to save the current embeddings and sizes.
             if current_num_topics in main_sizes:
+                if show_progress:
+                    print("<<Main Topic Found>>")
+                    print(f"Saving Reduced Topic Model with {current_num_topics} topics...")
                 # Transform Embeddings to lists.
                 json_topic_embeds = {}
                 for topic_id, topic_embed in new_topic_embeds.items():
@@ -816,11 +819,9 @@ class TopicModel:
                 reduced_topic_path = join(reduced_folder_path, reduced_topic_file)
                 with open(reduced_topic_path, 'w') as f:
                     json.dump(reduced_topic_index, f)
-
-            # Show Progress.
-            if show_progress:
-                count += 1
-                progress_bar(count, total)
+                # Progress.
+                if show_progress:
+                    print("<<Saved>>")
 
     def reduced_topics_saved(self):
         """
@@ -1274,9 +1275,9 @@ if __name__ == '__main__':
     for topic in all_topics:
         print(topic)
 
-    # # Save the Hierarchically Reduced Topic Models.
-    # print("\nSaving Topic Model's Topic Hierarchy...")
-    # the_topic_model.save_reduced_topics(show_progress=True)
+    # Save the Hierarchically Reduced Topic Models.
+    print("\nSaving Topic Model's Topic Hierarchy...")
+    the_topic_model.save_reduced_topics(show_progress=True)
 
     # top_n = 15
     # print(f"\nTop {top_n} words per topic:")
@@ -1286,25 +1287,25 @@ if __name__ == '__main__':
     #     for word_sim in word_list:
     #         print(word_sim)
 
-    # --Test Creating Hierarchically Reduced Topics--
-    new_topics = 7
-    print(f"\nCreating Topic Model with {new_topics} topics.")
-    the_topic_model.generate_new_topics(number_topics=new_topics, show_progress=True)
-    print("Done.")
-    print(f"[{stopwatch.formatted_runtime()}]")
-
-    print("\nNew Topics and Document count:")
-    all_topics = the_topic_model.top_topics()
-    for topic in all_topics:
-        print(topic)
-
-    top_n = 15
-    print(f"\nTop {top_n} words per new topic:")
-    words_per_topic = the_topic_model.all_topics_top_words(top_n)
-    for i, word_list in words_per_topic:
-        print(f"\n----> Topic <{i}>:")
-        for word_sim in word_list:
-            print(word_sim)
+    # # --Test Creating Hierarchically Reduced Topics--
+    # new_topics = 7
+    # print(f"\nCreating Topic Model with {new_topics} topics.")
+    # the_topic_model.generate_new_topics(number_topics=new_topics, show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+    #
+    # print("\nNew Topics and Document count:")
+    # all_topics = the_topic_model.top_topics()
+    # for topic in all_topics:
+    #     print(topic)
+    #
+    # top_n = 15
+    # print(f"\nTop {top_n} words per new topic:")
+    # words_per_topic = the_topic_model.all_topics_top_words(top_n)
+    # for i, word_list in words_per_topic:
+    #     print(f"\n----> Topic <{i}>:")
+    #     for word_sim in word_list:
+    #         print(word_sim)
 
     print("\nDone.")
     print(f"[{stopwatch.formatted_runtime()}]\n")
