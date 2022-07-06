@@ -272,29 +272,21 @@ class TopicModel:
             # Update Current Topic Size.
             current_num_topics = len(new_topic_embeds)
 
-        # Perform topic reduction until we get the desired number of topics
-        if show_progress:
-            # Check that we are reducing times at least once.
-            if number_topics < current_num_topics:
-                print(f"Reducing from {current_num_topics} to {number_topics} topics...")
-            else:
-                print(f"No need to reduce the current {current_num_topics} topics.")
-                total = self.num_topics - current_num_topics
-                progress_bar(total, total)
-        # Progress Variables.
-        count = 0
-        total = current_num_topics - number_topics
+        # Perform topic reduction until we get the desired number of topics.
         while number_topics < current_num_topics:
             # Reduce the number of topics by 1.
+            if show_progress:
+                print(f"Reducing from {current_num_topics} to {current_num_topics - 1} topics...")
             result_tuple = self._reduce_topic_size(ref_topic_embeds=new_topic_embeds,
-                                                   topic_sizes=new_topic_sizes)
+                                                   topic_sizes=new_topic_sizes,
+                                                   show_progress=show_progress)
             new_topic_embeds, new_topic_sizes = result_tuple
             # Update Current Number of Topics.
             current_num_topics = len(new_topic_embeds)
-            # Show progress.
-            if show_progress:
-                count += 1
-                progress_bar(count, total)
+
+        # Progress - Done with the reduction of Topics.
+        if show_progress:
+            print(f"No need to reduce the current {current_num_topics} topics.")
 
         # Update New Topics' Attributes.
         self.new_topics = True
@@ -321,7 +313,8 @@ class TopicModel:
                                                       self.topic_embeds,
                                                       show_progress=show_progress)
 
-    def _reduce_topic_size(self, ref_topic_embeds: dict, topic_sizes: dict):
+    def _reduce_topic_size(self, ref_topic_embeds: dict, topic_sizes: dict,
+                           show_progress=False):
         """
         Reduce the provided Topics in 'ref_topic_embeds' by 1, mixing the
         smallest topic with its closest neighbor.
@@ -332,6 +325,8 @@ class TopicModel:
                 reference and will be modified to store the new reduced topics.
             topic_sizes: Dictionary containing the current size of the topics we
                 are reducing.
+            show_progress: A Bool representing whether we show the progress of
+                the function or not.
 
         Returns:
             Tuple with 'ref_topic_embeds' dictionary  and a new 'topic_sizes'
@@ -358,7 +353,9 @@ class TopicModel:
         # Update embedding of the closest topic.
         ref_topic_embeds[close_topic_id] = merged_topic_embed
         # Get the new topic sizes.
-        new_topic_sizes = self._topic_document_count(ref_topic_embeds)
+        if show_progress:
+            print(f"Creating sizes for the new {len(ref_topic_embeds)} topics...")
+        new_topic_sizes = self._topic_document_count(ref_topic_embeds, show_progress=show_progress)
         # New Dictionaries with embeds and sizes.
         return ref_topic_embeds, new_topic_sizes
 
@@ -633,8 +630,7 @@ class TopicModel:
 
         # Progress Variables.
         count = 0
-        total = len(topic_embeds_dict)
-
+        total = len(self.doc_embeds)
         # Iterate through the documents and their embeddings.
         topic_docs_count = {}
         for doc_id, doc_embed in self.doc_embeds.items():
@@ -873,6 +869,17 @@ class TopicModel:
         """
         return cls(model_id=model_id, used_saved=True, show_progress=show_progress)
 
+    @classmethod
+    def saved_topic_models(cls):
+        """
+        - List of Saved Topic Models
+        - (Other Method, given the ID) Show if they have their hierarchy saved. [with Topic Hierarchy]
+
+        Returns:
+
+        """
+        pass
+
 
 def closest_vector(embedding, vectors_dict: dict):
     """
@@ -1038,6 +1045,7 @@ def save_cord19_topics():
     print("Done.")
     print(f"[{time_record.formatted_runtime()}]")
     # Create Topic Model.
+    topic_model_id = 'cord19_dataset_doc2vec_small'
     print("\nCreating Topic Model using the Small Doc2Vec Model...")
     topic_model = TopicModel(corpus=topic_corpus, doc_model=doc_model,
                              only_title_abstract=True, show_progress=True)
@@ -1046,7 +1054,6 @@ def save_cord19_topics():
     # Report Topics found.
     print(f"\n{topic_model.num_topics} topics found.")
     # Save Topic Model.
-    topic_model_id = 'cord19_dataset_doc2vec_small'
     print(f"\nSaving Topic Model with ID: {topic_model_id}")
     topic_model.save(topic_model_id, show_progress=True)
     print("Done.")
@@ -1059,6 +1066,7 @@ def save_cord19_topics():
     print("Done.")
     print(f"[{time_record.formatted_runtime()}]")
     # Create Topic Model.
+    topic_model_id = 'cord19_dataset_doc2vec_big'
     print("\nCreating Topic Model using the Big Doc2Vec Model...")
     topic_model = TopicModel(corpus=topic_corpus, doc_model=doc_model,
                              only_title_abstract=True, show_progress=True)
@@ -1067,7 +1075,6 @@ def save_cord19_topics():
     # Report Topics found.
     print(f"\n{topic_model.num_topics} topics found.")
     # Save Topic Model.
-    topic_model_id = 'cord19_dataset_doc2vec_big'
     print(f"\nSaving Topic Model with ID: {topic_model_id}")
     topic_model.save(topic_model_id, show_progress=True)
     print("Done.")
@@ -1080,6 +1087,7 @@ def save_cord19_topics():
     print("Done.")
     print(f"[{time_record.formatted_runtime()}]")
     # Create Topic Model.
+    topic_model_id = 'cord19_dataset_glove'
     print("\nCreating Topic Model using GloVe...")
     topic_model = TopicModel(corpus=topic_corpus, doc_model=doc_model,
                              only_title_abstract=True, show_progress=True)
@@ -1088,7 +1096,6 @@ def save_cord19_topics():
     # Report Topics found.
     print(f"\n{topic_model.num_topics} topics found.")
     # Save Topic Model.
-    topic_model_id = 'cord19_dataset_glove'
     print(f"\nSaving Topic Model with ID: {topic_model_id}")
     topic_model.save(topic_model_id, show_progress=True)
     print("Done.")
@@ -1101,6 +1108,7 @@ def save_cord19_topics():
     print("Done.")
     print(f"[{time_record.formatted_runtime()}]")
     # Create Topic Model.
+    topic_model_id = 'cord19_dataset_bert_fast'
     print("\nCreating Topic Model using BERT (fastest version)...")
     topic_model = TopicModel(corpus=topic_corpus, doc_model=doc_model,
                              only_title_abstract=True, show_progress=True)
@@ -1109,7 +1117,6 @@ def save_cord19_topics():
     # Report Topics found.
     print(f"\n{topic_model.num_topics} topics found.")
     # Save Topic Model.
-    topic_model_id = 'cord19_dataset_bert_fast'
     print(f"\nSaving Topic Model with ID: {topic_model_id}")
     topic_model.save(topic_model_id, show_progress=True)
     print("Done.")
@@ -1122,6 +1129,7 @@ def save_cord19_topics():
     print("Done.")
     print(f"[{time_record.formatted_runtime()}]")
     # Create Topic Model.
+    topic_model_id = 'cord19_dataset_bert_multilingual'
     print("\nCreating Topic Model using Multilingual BERT (fast version)...")
     topic_model = TopicModel(corpus=topic_corpus, doc_model=doc_model,
                              only_title_abstract=True, show_progress=True)
@@ -1130,7 +1138,6 @@ def save_cord19_topics():
     # Report Topics found.
     print(f"\n{topic_model.num_topics} topics found.")
     # Save Topic Model.
-    topic_model_id = 'cord19_dataset_bert_multilingual'
     print(f"\nSaving Topic Model with ID: {topic_model_id}")
     topic_model.save(topic_model_id, show_progress=True)
     print("Done.")
@@ -1143,6 +1150,7 @@ def save_cord19_topics():
     print("Done.")
     print(f"[{time_record.formatted_runtime()}]")
     # Create Topic Model.
+    topic_model_id = 'cord19_dataset_bert_best'
     print("\nCreating Topic Model using the Best Performing BERT...")
     topic_model = TopicModel(corpus=topic_corpus, doc_model=doc_model,
                              only_title_abstract=True, show_progress=True)
@@ -1151,7 +1159,6 @@ def save_cord19_topics():
     # Report Topics found.
     print(f"\n{topic_model.num_topics} topics found.")
     # Save Topic Model.
-    topic_model_id = 'cord19_dataset_bert_best'
     print(f"\nSaving Topic Model with ID: {topic_model_id}")
     topic_model.save(topic_model_id, show_progress=True)
     print("Done.")
@@ -1163,6 +1170,7 @@ def save_cord19_topics():
     print("Done.")
     print(f"[{time_record.formatted_runtime()}]")
     # Create Topic Model.
+    topic_model_id = 'cord19_dataset_specter'
     print("\nCreating Topic Model using SPECTER...")
     topic_model = TopicModel(corpus=topic_corpus, doc_model=doc_model,
                              only_title_abstract=True, show_progress=True)
@@ -1171,7 +1179,6 @@ def save_cord19_topics():
     # Report Topics found.
     print(f"\n{topic_model.num_topics} topics found.")
     # Save Topic Model.
-    topic_model_id = 'cord19_dataset_specter'
     print(f"\nSaving Topic Model with ID: {topic_model_id}")
     topic_model.save(topic_model_id, show_progress=True)
     print("Done.")
@@ -1184,6 +1191,25 @@ def save_cord19_topics():
 if __name__ == '__main__':
     # Record the Runtime of the Program
     stopwatch = TimeKeeper()
+
+    # # --**-- Load Saved CORD-19 Topic Model --**--
+    # the_model_id = 'cord19_dataset_bert_fast'
+    # print(f"\nLoading Topic Model with ID <{the_model_id}>...")
+    # the_topic_model = TopicModel.load(model_id=the_model_id, show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+    #
+    # total_topics = the_topic_model.num_topics
+    # print(f"\n{total_topics} topics found.")
+    #
+    # print("\nTopics and Document count:")
+    # all_topics = the_topic_model.top_topics()
+    # for tuple_topic_size in all_topics:
+    #     print(tuple_topic_size)
+    #
+    # # Save the Hierarchically Reduced Topic Models.
+    # print("\nSaving Topic Model's Topic Hierarchy...")
+    # the_topic_model.save_reduced_topics(show_progress=True)
 
     # -- Load Corpus --
     # # Load Random Sample to use a limited amount of papers from CORD-19.
@@ -1261,7 +1287,7 @@ if __name__ == '__main__':
     #         print(word_sim)
 
     # --Test Creating Hierarchically Reduced Topics--
-    new_topics = 10
+    new_topics = 7
     print(f"\nCreating Topic Model with {new_topics} topics.")
     the_topic_model.generate_new_topics(number_topics=new_topics, show_progress=True)
     print("Done.")
