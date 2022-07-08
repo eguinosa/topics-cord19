@@ -26,8 +26,8 @@ class TopicModel:
     """
     # Class Data Locations.
     data_folder = 'project_data'
-    topic_models_folder = 'topic_models'
-    topic_model_prefix = 'topics_'
+    class_data_folder = 'topic_models'
+    model_folder_prefix = 'topics_'
     default_model_id = 'default'
     basic_index_file = 'topic_model_basic_index.json'
     model_index_file = 'topic_model_index.json'
@@ -37,7 +37,7 @@ class TopicModel:
     reduced_topics_folder = 'reduced_topic_models'
     reduced_topic_prefix = 'reduced_topic_model_'
 
-    # The Doc Models available to use.
+    # The Supported Doc Models.
     supported_doc_models = ['doc2vec', 'glove', 'bert', 'specter']
 
     def __init__(self, corpus: CorpusCord19 = None, doc_model: DocumentModel = None,
@@ -73,12 +73,12 @@ class TopicModel:
             # Check if the data folders exist.
             if not isdir(self.data_folder):
                 raise FileNotFoundError("There is no project data available.")
-            topic_models_path = join(self.data_folder, self.topic_models_folder)
+            topic_models_path = join(self.data_folder, self.class_data_folder)
             if not isdir(topic_models_path):
                 raise FileNotFoundError("There is no Topic Model saved.")
 
             # Create folder path for this topic model.
-            model_folder_id = self.topic_model_prefix + self.model_id
+            model_folder_id = self.model_folder_prefix + self.model_id
             model_folder_path = join(topic_models_path, model_folder_id)
 
             # Load Index Dictionary for basic attributes.
@@ -254,9 +254,9 @@ class TopicModel:
             # Upload The Reduced Topic Model.
             if show_progress:
                 print(f"Loading Reduced Topic Model with {optimal_size} topics...")
-            model_folder_name = self.topic_model_prefix + self.model_id
+            model_folder_name = self.model_folder_prefix + self.model_id
             reduced_topic_file = self.reduced_topic_prefix + str(optimal_size) + '.json'
-            reduced_topic_path = join(self.data_folder, self.topic_models_folder,
+            reduced_topic_path = join(self.data_folder, self.class_data_folder,
                                       model_folder_name, self.reduced_topics_folder,
                                       reduced_topic_file)
             with open(reduced_topic_path, 'r') as f:
@@ -675,10 +675,10 @@ class TopicModel:
         # Check the project data folders exist.
         if not isdir(self.data_folder):
             mkdir(self.data_folder)
-        topic_models_path = join(self.data_folder, self.topic_models_folder)
+        topic_models_path = join(self.data_folder, self.class_data_folder)
         if not isdir(topic_models_path):
             mkdir(topic_models_path)
-        model_folder_name = self.topic_model_prefix + self.model_id
+        model_folder_name = self.model_folder_prefix + self.model_id
         model_folder_path = join(topic_models_path, model_folder_name)
         if not isdir(model_folder_path):
             mkdir(model_folder_path)
@@ -750,10 +750,10 @@ class TopicModel:
         # Check the project data folders exist.
         if not isdir(self.data_folder):
             mkdir(self.data_folder)
-        topic_models_path = join(self.data_folder, self.topic_models_folder)
+        topic_models_path = join(self.data_folder, self.class_data_folder)
         if not isdir(topic_models_path):
             mkdir(topic_models_path)
-        model_folder_name = self.topic_model_prefix + self.model_id
+        model_folder_name = self.model_folder_prefix + self.model_id
         model_folder_path = join(topic_models_path, model_folder_name)
         if not isdir(model_folder_path):
             mkdir(model_folder_path)
@@ -796,10 +796,10 @@ class TopicModel:
         # Check the class' data folders.
         if not isdir(self.data_folder):
             mkdir(self.data_folder)
-        class_folder_path = join(self.data_folder, self.topic_models_folder)
+        class_folder_path = join(self.data_folder, self.class_data_folder)
         if not isdir(class_folder_path):
             mkdir(class_folder_path)
-        model_folder_name = self.topic_model_prefix + self.model_id
+        model_folder_name = self.model_folder_prefix + self.model_id
         model_folder_path = join(class_folder_path, model_folder_name)
         if not isdir(model_folder_path):
             mkdir(model_folder_path)
@@ -864,10 +864,10 @@ class TopicModel:
         # Check the Model's Folders.
         if not isdir(self.data_folder):
             return False
-        class_folder_path = join(self.data_folder, self.topic_models_folder)
+        class_folder_path = join(self.data_folder, self.class_data_folder)
         if not isdir(class_folder_path):
             return False
-        model_folder_name = self.topic_model_prefix + self.model_id
+        model_folder_name = self.model_folder_prefix + self.model_id
         model_folder_path = join(class_folder_path, model_folder_name)
         if not isdir(model_folder_path):
             return False
@@ -921,10 +921,10 @@ class TopicModel:
         # Check the existence of the data folders.
         if not isdir(cls.data_folder):
             raise FileNotFoundError("There is no Data Folder available.")
-        class_folder_path = join(cls.data_folder, cls.topic_models_folder)
+        class_folder_path = join(cls.data_folder, cls.class_data_folder)
         if not isdir(class_folder_path):
             raise FileNotFoundError("There is no Class Data Folder available.")
-        model_folder_name = cls.topic_model_prefix + model_id
+        model_folder_name = cls.model_folder_prefix + model_id
         model_folder_path = join(class_folder_path, model_folder_name)
         if not isdir(model_folder_path):
             raise FileNotFoundError(f"The Topic Model <{model_id}> has no Data Folder.")
@@ -949,7 +949,7 @@ class TopicModel:
         # Check the Data Folders.
         if not isdir(cls.data_folder):
             return []
-        class_folder_path = join(cls.data_folder, cls.topic_models_folder)
+        class_folder_path = join(cls.data_folder, cls.class_data_folder)
         if not isdir(class_folder_path):
             return []
 
@@ -960,7 +960,7 @@ class TopicModel:
             # Check we have a valid Model Folder Name.
             if not isdir(entry_path):
                 continue
-            if not entry_name.startswith(cls.topic_model_prefix):
+            if not entry_name.startswith(cls.model_folder_prefix):
                 continue
 
             # Check for the Index Files.
@@ -981,7 +981,7 @@ class TopicModel:
                 continue
 
             # Save Model ID, the folder contains all the main indexes.
-            model_id = entry_name.replace(cls.topic_model_prefix, '', 1)
+            model_id = entry_name.replace(cls.model_folder_prefix, '', 1)
             topic_ids.append(model_id)
 
         # List with the IDs of all the valid Topic Models.
