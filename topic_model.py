@@ -4,7 +4,7 @@ import json
 import umap
 import hdbscan
 import numpy as np
-from os import mkdir
+from os import mkdir, listdir
 from os.path import isdir, isfile, join
 from numpy.linalg import norm
 
@@ -29,6 +29,7 @@ class TopicModel:
     topic_models_folder = 'topic_models'
     topic_model_prefix = 'topics_'
     default_model_id = 'default'
+    basic_index_file = 'topic_model_basic_index.json'
     model_index_file = 'topic_model_index.json'
     word_embeds_file = 'topic_model_word_embeds.json'
     doc_embeds_file = 'topic_model_doc_embeds.json'
@@ -682,6 +683,9 @@ class TopicModel:
         if not isdir(model_folder_path):
             mkdir(model_folder_path)
 
+        # Save Topic Model's Basic Info.
+        self.save_basic_info()
+
         # Create & Save Index Dictionary for basic attributes.
         if show_progress:
             print("Saving Topic Model basic attributes...")
@@ -737,6 +741,34 @@ class TopicModel:
         topic_index_path = join(model_folder_path, self.topic_embeds_file)
         with open(topic_index_path, 'w') as f:
             json.dump(topic_embeds_index, f)
+
+    def save_basic_info(self):
+        """
+        Save the number of topics, the number of documents and the Document
+        Model Type of current Topic Model inside the Model's Folder.
+        """
+        # Check the project data folders exist.
+        if not isdir(self.data_folder):
+            mkdir(self.data_folder)
+        topic_models_path = join(self.data_folder, self.topic_models_folder)
+        if not isdir(topic_models_path):
+            mkdir(topic_models_path)
+        model_folder_name = self.topic_model_prefix + self.model_id
+        model_folder_path = join(topic_models_path, model_folder_name)
+        if not isdir(model_folder_path):
+            mkdir(model_folder_path)
+
+        # Save index with the basic data.
+        basic_index = {
+            'model_type': self.model_type,
+            'num_topics': self.num_topics,
+            'corpus_size': len(self.corpus_ids),
+            'topics_hierarchy': self.reduced_topics_saved(),
+        }
+        # Create path.
+        basic_index_path = join(model_folder_path, self.basic_index_file)
+        with open(basic_index_path, 'w') as f:
+            json.dump(basic_index, f)
 
     def save_reduced_topics(self, show_progress=False):
         """
@@ -871,15 +903,89 @@ class TopicModel:
         return cls(model_id=model_id, used_saved=True, show_progress=show_progress)
 
     @classmethod
-    def saved_topic_models(cls):
+    def basic_model_info(cls, model_id: str = None):
         """
-        - List of Saved Topic Models
-        - (Other Method, given the ID) Show if they have their hierarchy saved. [with Topic Hierarchy]
+        Load the Basic Model Info of the Topic Model 'model_id'.
+
+        Args:
+            model_id: String with the ID of the Topic Model.
 
         Returns:
-
+            Dictionary with the 'model_type', 'num_topics', 'corpus_size' and
+                the 'topics_hierarchy' bool of the Topic Model.
         """
-        pass
+        # If no 'model_id' is provided load the Default Model.
+        if not model_id:
+            model_id = cls.default_model_id
+
+        # Check the existence of the data folders.
+        if not isdir(cls.data_folder):
+            raise FileNotFoundError("There is no Data Folder available.")
+        class_folder_path = join(cls.data_folder, cls.topic_models_folder)
+        if not isdir(class_folder_path):
+            raise FileNotFoundError("There is no Class Data Folder available.")
+        model_folder_name = cls.topic_model_prefix + model_id
+        model_folder_path = join(class_folder_path, model_folder_name)
+        if not isdir(model_folder_path):
+            raise FileNotFoundError("The Topic Model has no Data Folder.")
+
+        # Load the Basic Index.
+        basic_index_path = join(model_folder_path, cls.basic_index_file)
+        if not isfile(basic_index_path):
+            raise FileNotFoundError("The Topic Model has not Basic Index File.")
+        with open(basic_index_path, 'r') as f:
+            basic_index = json.load(f)
+
+        # The Basic Index of the Topic Model.
+        return basic_index
+
+    @classmethod
+    def saved_topic_models(cls):
+        """
+        Create a list with the IDs of the saved Topic Models.
+
+        Returns: List[String] with the IDs of the saved Topic Models.
+        """
+        # Check the Data Folders.
+        if not isdir(cls.data_folder):
+            return []
+        class_folder_path = join(cls.data_folder, cls.topic_models_folder)
+        if not isdir(class_folder_path):
+            return []
+
+        # Check all the available IDs inside class folder.
+        topic_ids = []
+        for entry_name in listdir(class_folder_path):
+            entry_path = join(class_folder_path, entry_name)
+            # Check we have a valid Model Folder Name.
+            if not isdir(entry_path):
+                continue
+            if not entry_name.startswith(cls.topic_model_prefix):
+                continue
+
+            # Check for the Index Files.
+            basic_index_path = join(entry_path, cls.basic_index_file)
+            if not isfile(basic_index_path):
+                continue
+            model_index_path = join(entry_path, cls.model_index_file)
+            if not isfile(model_index_path):
+                continue
+            word_embeds_path = join(entry_path, cls.word_embeds_file)
+            if not isfile(word_embeds_path):
+                continue
+            doc_embeds_path = join(entry_path, cls.doc_embeds_file)
+            if not isfile(doc_embeds_path):
+                continue
+            topic_embeds_path = join(entry_path, cls.topic_embeds_file)
+            if not isfile(topic_embeds_path):
+                continue
+
+            # Save Model ID, the folder contains all the main indexes.
+            model_id = entry_name.replace(cls.topic_model_prefix, '', 1)
+            topic_ids.append(model_id)
+
+        # List with the IDs of all the valid Topic Models.
+        return topic_ids
 
 
 def closest_vector(embedding, vectors_dict: dict):
@@ -1193,24 +1299,37 @@ if __name__ == '__main__':
     # Record the Runtime of the Program
     stopwatch = TimeKeeper()
 
-    # --**-- Load Saved CORD-19 Topic Model --**--
-    the_model_id = 'cord19_dataset_bert_fast'
-    print(f"\nLoading Topic Model with ID <{the_model_id}>...")
-    the_topic_model = TopicModel.load(model_id=the_model_id, show_progress=True)
-    print("Done.")
-    print(f"[{stopwatch.formatted_runtime()}]")
+    # -- Create Basic Indexes for the Saved Topic Models --
+    print("\nCreating Basic Indexes of Models...")
+    for the_id in TopicModel.saved_topic_models():
+        print(f"\nLoading the Topic Model <{the_id}>...")
+        the_model = TopicModel.load(model_id=the_id, show_progress=True)
+        print("Done.")
+        print(f"[{stopwatch.formatted_runtime()}]")
 
-    total_topics = the_topic_model.num_topics
-    print(f"\n{total_topics} topics found.")
+        print(f"\nSaving Basic Info of Model <{the_id}>...")
+        the_model.save_basic_info()
+        print("Done.")
+        print(f"[{stopwatch.formatted_runtime()}]")
 
-    print("\nTopics and Document count:")
-    all_topics = the_topic_model.top_topics()
-    for tuple_topic_size in all_topics:
-        print(tuple_topic_size)
-
-    # Save the Hierarchically Reduced Topic Models.
-    print("\nSaving Topic Model's Topic Hierarchy...")
-    the_topic_model.save_reduced_topics(show_progress=True)
+    # # --**-- Load Saved CORD-19 Topic Model --**--
+    # the_model_id = 'cord19_dataset_bert_fast'
+    # print(f"\nLoading Topic Model with ID <{the_model_id}>...")
+    # the_topic_model = TopicModel.load(model_id=the_model_id, show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+    #
+    # total_topics = the_topic_model.num_topics
+    # print(f"\n{total_topics} topics found.")
+    #
+    # print("\nTopics and Document count:")
+    # all_topics = the_topic_model.top_topics()
+    # for tuple_topic_size in all_topics:
+    #     print(tuple_topic_size)
+    #
+    # # Save the Hierarchically Reduced Topic Models.
+    # print("\nSaving Topic Model's Topic Hierarchy...")
+    # the_topic_model.save_reduced_topics(show_progress=True)
 
     # # -- Load Corpus --
     # # # Load Random Sample to use a limited amount of papers from CORD-19.
