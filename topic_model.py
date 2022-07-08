@@ -903,7 +903,7 @@ class TopicModel:
         return cls(model_id=model_id, used_saved=True, show_progress=show_progress)
 
     @classmethod
-    def basic_model_info(cls, model_id: str = None):
+    def basic_info(cls, model_id: str = None):
         """
         Load the Basic Model Info of the Topic Model 'model_id'.
 
