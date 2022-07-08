@@ -59,7 +59,7 @@ class TopicModel:
             only_title_abstract: A Bool showing if we are going to use only the
                 Titles & Abstracts of the papers, or all their content to create
                 the vocabulary and the embeddings.
-            model_id: A string with the ID of a previously saved Topic Model.
+            model_id: String with the ID that identifies the Topic Model.
             used_saved: A Bool to know if we need to load the Topic Model from
                 a file or recalculate it.
             show_progress: Bool representing whether we show the progress of
@@ -91,9 +91,9 @@ class TopicModel:
                 topic_model_index = json.load(f)
             # Get the Attributes.
             self.model_type = topic_model_index['model_type']
-            self.use_title_abstract = topic_model_index['use_title_abstract']
             self.num_topics = topic_model_index['num_topics']
             self.corpus_ids = topic_model_index['corpus_ids']
+            self.use_title_abstract = topic_model_index['use_title_abstract']
             # Chance Dictionary's keys from str back to int keys (JSON issue).
             loaded_topic_docs = topic_model_index['topic_docs']
             self.topic_docs = dict([(int(key), docs)
@@ -675,11 +675,11 @@ class TopicModel:
         # Check the project data folders exist.
         if not isdir(self.data_folder):
             mkdir(self.data_folder)
-        topic_models_path = join(self.data_folder, self.class_data_folder)
-        if not isdir(topic_models_path):
-            mkdir(topic_models_path)
+        class_folder_path = join(self.data_folder, self.class_data_folder)
+        if not isdir(class_folder_path):
+            mkdir(class_folder_path)
         model_folder_name = self.model_folder_prefix + self.model_id
-        model_folder_path = join(topic_models_path, model_folder_name)
+        model_folder_path = join(class_folder_path, model_folder_name)
         if not isdir(model_folder_path):
             mkdir(model_folder_path)
 
@@ -691,11 +691,11 @@ class TopicModel:
             print("Saving Topic Model basic attributes...")
         topic_model_index = {
             'model_type': self.model_type,
-            'use_title_abstract': self.use_title_abstract,
             'num_topics': self.num_topics,
             'corpus_ids': self.corpus_ids,
             'topic_docs': self.topic_docs,
             'topic_words': self.topic_words,
+            'use_title_abstract': self.use_title_abstract,
         }
         # Create index path.
         model_index_path = join(model_folder_path, self.model_index_file)
@@ -750,11 +750,11 @@ class TopicModel:
         # Check the project data folders exist.
         if not isdir(self.data_folder):
             mkdir(self.data_folder)
-        topic_models_path = join(self.data_folder, self.class_data_folder)
-        if not isdir(topic_models_path):
-            mkdir(topic_models_path)
+        class_folder_path = join(self.data_folder, self.class_data_folder)
+        if not isdir(class_folder_path):
+            mkdir(class_folder_path)
         model_folder_name = self.model_folder_prefix + self.model_id
-        model_folder_path = join(topic_models_path, model_folder_name)
+        model_folder_path = join(class_folder_path, model_folder_name)
         if not isdir(model_folder_path):
             mkdir(model_folder_path)
 
@@ -780,10 +780,10 @@ class TopicModel:
 
         The saved topic sizes will be in the range of 2-1000, with different
         steps depending on the Topic Size range.
-        - Step of  5 between  2 and 30.
-        - Step of 10 between 30 and 100.
-        - Step of 25 between 100 and 300.
-        - Step of 50 between 300 and 1000.
+          - Step of  5 between  2 and 30.
+          - Step of 10 between 30 and 100.
+          - Step of 25 between 100 and 300.
+          - Step of 50 between 300 and 1000.
 
         Args:
             show_progress:  A Bool representing whether we show the progress of
@@ -1299,105 +1299,70 @@ if __name__ == '__main__':
     # Record the Runtime of the Program
     stopwatch = TimeKeeper()
 
-    # -- Create Basic Indexes for the Saved Topic Models --
-    print("\nCreating Basic Indexes of Models...")
-    for the_id in TopicModel.saved_topic_models():
-        print(f"\nLoading the Topic Model <{the_id}>...")
-        the_model = TopicModel.load(model_id=the_id, show_progress=True)
-        print("Done.")
-        print(f"[{stopwatch.formatted_runtime()}]")
+    # -- Load Corpus --
+    # # Load Random Sample to use a limited amount of papers from CORD-19.
+    # test_size = 500
+    # print(f"\nLoading Random Sample of {big_number(test_size)} documents...")
+    # sample = RandomSample(paper_type='medium', sample_size=test_size, show_progress=True)
+    # sample = RandomSample.load(show_progress=True)
 
-        print(f"\nSaving Basic Info of Model <{the_id}>...")
-        the_model.save_basic_info()
-        print("Done.")
-        print(f"[{stopwatch.formatted_runtime()}]")
+    # Load RandomSample() saved with an id.
+    sample_id = '25000_docs'
+    print(f"Loading Saved Random Sample <{sample_id}>...")
+    sample = RandomSample.load(sample_id=sample_id, show_progress=True)
 
-    # # --**-- Load Saved CORD-19 Topic Model --**--
-    # the_model_id = 'cord19_dataset_bert_fast'
-    # print(f"\nLoading Topic Model with ID <{the_model_id}>...")
-    # the_topic_model = TopicModel.load(model_id=the_model_id, show_progress=True)
-    # print("Done.")
-    # print(f"[{stopwatch.formatted_runtime()}]")
-    #
-    # total_topics = the_topic_model.num_topics
-    # print(f"\n{total_topics} topics found.")
-    #
-    # print("\nTopics and Document count:")
-    # all_topics = the_topic_model.top_topics()
-    # for tuple_topic_size in all_topics:
-    #     print(tuple_topic_size)
-    #
-    # # Save the Hierarchically Reduced Topic Models.
-    # print("\nSaving Topic Model's Topic Hierarchy...")
-    # the_topic_model.save_reduced_topics(show_progress=True)
+    # # Use CORD-19 Dataset
+    # print("\nLoading the CORD-19 Dataset...")
+    # sample = Papers(show_progress=True)
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
 
-    # # -- Load Corpus --
-    # # # Load Random Sample to use a limited amount of papers from CORD-19.
-    # # test_size = 500
-    # # print(f"\nLoading Random Sample of {big_number(test_size)} documents...")
-    # # sample = RandomSample(paper_type='medium', sample_size=test_size, show_progress=True)
-    # # sample = RandomSample.load(show_progress=True)
-    #
-    # # Load RandomSample() saved with an id.
-    # sample_id = '3000_docs'
-    # print(f"Loading Saved Random Sample <{sample_id}>...")
-    # sample = RandomSample.load(sample_id=sample_id, show_progress=True)
-    #
-    # # # Use CORD-19 Dataset
-    # # print("\nLoading the CORD-19 Dataset...")
-    # # sample = Papers(show_progress=True)
-    # print("Done.")
-    # print(f"[{stopwatch.formatted_runtime()}]")
-    #
-    # # Confirm amount of papers in the corpus.
-    # papers_count = len(sample.papers_cord_uids())
-    # print(f"\n{big_number(papers_count)} papers loaded.")
-    #
-    # # -- Load Document Model --
-    # # Use BERT Document Model.
-    # print("\nLoading Bert Model...")
-    # # bert_name = 'all-MiniLM-L12-v2'
-    # bert_name = 'paraphrase-MiniLM-L3-v2'
-    # my_model = BertCord19(model_name=bert_name, show_progress=True)
-    #
-    # # # Use Specter Document Model.
-    # # print("\nLoading Specter model...")
-    # # my_model = SpecterManager(show_progress=True)
-    #
-    # # Use Doc2Vec Model trained with Cord-19 papers.
-    # # print("\nLoading Doc2Vec model of the Cord-19 Dataset...")
-    # # my_model = Doc2VecCord19.load('cord19_dataset', show_progress=True)
-    # print("Done.")
-    # print(f"[{stopwatch.formatted_runtime()}]")
-    #
-    # # -- Load Topic Model --
-    # # the_model_id = 'testing_' + my_model.model_type()
-    # the_model_id = f'testing_{my_model.model_type()}_{sample_id}'
-    #
-    # # # Creating Topic Model.
-    # # print(f"\nCreating Topic Model with ID <{the_model_id}>...")
-    # # the_topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True,
-    # #                              model_id=the_model_id, show_progress=True)
-    # # print(f"Saving Topic Model with ID <{the_topic_model.model_id}>")
-    # # the_topic_model.save(show_progress=True)
-    #
+    # Confirm amount of papers in the corpus.
+    papers_count = len(sample.papers_cord_uids())
+    print(f"\n{big_number(papers_count)} papers loaded.")
+
+    # -- Load Document Model --
+    # Use BERT Document Model.
+    print("\nLoading Bert Model...")
+    # bert_name = 'all-MiniLM-L12-v2'
+    bert_name = 'paraphrase-MiniLM-L3-v2'
+    my_model = BertCord19(model_name=bert_name, show_progress=True)
+
+    # # Use Specter Document Model.
+    # print("\nLoading Specter model...")
+    # my_model = SpecterManager(show_progress=True)
+
+    # Use Doc2Vec Model trained with Cord-19 papers.
+    # print("\nLoading Doc2Vec model of the Cord-19 Dataset...")
+    # my_model = Doc2VecCord19.load('cord19_dataset', show_progress=True)
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
+
+    # -- Load Topic Model --
+    # the_model_id = 'testing_' + my_model.model_type()
+    the_model_id = f'test_{my_model.model_type()}_{sample_id}'
+
+    # Creating Topic Model.
+    print(f"\nCreating Topic Model with ID <{the_model_id}>...")
+    the_topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True,
+                                 model_id=the_model_id, show_progress=True)
+    print(f"Saving Topic Model with ID <{the_topic_model.model_id}>")
+    the_topic_model.save(show_progress=True)
+
     # # Loading Saved Topic Model.
+    # the_model_id = 'test_bert_25000_docs'
     # the_topic_model = TopicModel.load(model_id=the_model_id, show_progress=True)
     # print("Done.")
     # print(f"[{stopwatch.formatted_runtime()}]")
-    #
-    # total_topics = the_topic_model.num_topics
-    # print(f"\n{total_topics} topics found.")
-    #
-    # print("\nTopics and Document count:")
-    # all_topics = the_topic_model.top_topics()
-    # for topic in all_topics:
-    #     print(topic)
-    #
-    # # # Save the Hierarchically Reduced Topic Models.
-    # # print("\nSaving Topic Model's Topic Hierarchy...")
-    # # the_topic_model.save_reduced_topics(show_progress=True)
-    #
+
+    total_topics = the_topic_model.num_topics
+    print(f"\n{total_topics} topics found.")
+
+    print("\nTopics and Document count:")
+    all_topics = the_topic_model.top_topics()
+    for topic_and_size in all_topics:
+        print(topic_and_size)
+
     # # top_n = 15
     # # print(f"\nTop {top_n} words per topic:")
     # # words_per_topic = the_topic_model.all_topics_top_words(top_n)
@@ -1405,8 +1370,14 @@ if __name__ == '__main__':
     # #     print(f"\n----> Topic <{i}>:")
     # #     for word_sim in word_list:
     # #         print(word_sim)
-    #
+
     # # --Test Creating Hierarchically Reduced Topics--
+    # # Save the Hierarchically Reduced Topic Models.
+    # print("\nSaving Topic Model's Topic Hierarchy...")
+    # the_topic_model.save_reduced_topics(show_progress=True)
+    # # Update Basic Info of the Model.
+    # the_topic_model.save_basic_info()
+
     # new_topics = 7
     # print(f"\nCreating Topic Model with {new_topics} topics.")
     # the_topic_model.generate_new_topics(number_topics=new_topics, show_progress=True)
@@ -1425,6 +1396,25 @@ if __name__ == '__main__':
     #     print(f"\n----> Topic <{i}>:")
     #     for word_sim in word_list:
     #         print(word_sim)
+
+    # # --**-- Create Hierarchy for CORD-19 Topic Models --**--
+    # the_model_id = 'cord19_dataset_bert_fast'
+    # print(f"\nLoading Topic Model with ID <{the_model_id}>...")
+    # the_topic_model = TopicModel.load(model_id=the_model_id, show_progress=True)
+    # print("Done.")
+    # print(f"[{stopwatch.formatted_runtime()}]")
+    #
+    # total_topics = the_topic_model.num_topics
+    # print(f"\n{total_topics} topics found.")
+    #
+    # print("\nTopics and Document count:")
+    # all_topics = the_topic_model.top_topics()
+    # for tuple_topic_size in all_topics:
+    #     print(tuple_topic_size)
+    #
+    # # Save the Hierarchically Reduced Topic Models.
+    # print("\nSaving Topic Model's Topic Hierarchy...")
+    # the_topic_model.save_reduced_topics(show_progress=True)
 
     print("\nDone.")
     print(f"[{stopwatch.formatted_runtime()}]\n")
