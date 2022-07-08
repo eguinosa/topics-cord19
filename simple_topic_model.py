@@ -171,7 +171,14 @@ if __name__ == '__main__':
     for topic_and_size in all_topics:
         print(topic_and_size)
 
-    
+    print("\nTopics Vocabulary:")
+    top_n = 10
+    print(f"\nTop {top_n} words per topic:")
+    words_per_topic = the_model.all_topics_top_words(top_n)
+    for i, word_list in words_per_topic:
+        print(f"\n----> Topic <{i}>:")
+        for word_sim in word_list:
+            print(word_sim)
 
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]\n")
