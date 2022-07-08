@@ -927,12 +927,12 @@ class TopicModel:
         model_folder_name = cls.topic_model_prefix + model_id
         model_folder_path = join(class_folder_path, model_folder_name)
         if not isdir(model_folder_path):
-            raise FileNotFoundError("The Topic Model has no Data Folder.")
+            raise FileNotFoundError(f"The Topic Model <{model_id}> has no Data Folder.")
 
         # Load the Basic Index.
         basic_index_path = join(model_folder_path, cls.basic_index_file)
         if not isfile(basic_index_path):
-            raise FileNotFoundError("The Topic Model has not Basic Index File.")
+            raise FileNotFoundError(f"The Topic Model <{model_id}> has not Basic Index File.")
         with open(basic_index_path, 'r') as f:
             basic_index = json.load(f)
 
