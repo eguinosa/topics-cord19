@@ -314,9 +314,9 @@ if __name__ == '__main__':
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
-    vocab_word = the_vocabulary[5]
-    print(f"\nThe embedding of the word <{vocab_word}>:")
-    print(the_embed_dict[vocab_word])
+    the_word = the_vocabulary[5]
+    print(f"\nThe embedding of the word <{the_word}>:")
+    print(the_embed_dict[the_word])
 
     # # Test save_titles_abstracts():
     # print("\nSaving Documents Titles and Abstracts to files...")
