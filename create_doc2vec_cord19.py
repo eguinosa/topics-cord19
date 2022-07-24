@@ -3,9 +3,9 @@
 import logging
 
 from papers import Papers
-from doc2vec_cord19 import Doc2VecCord19
 from time_keeper import TimeKeeper
 from extra_funcs import big_number
+# from doc2vec_cord19 import Doc2VecCord19
 
 
 if __name__ == '__main__':
