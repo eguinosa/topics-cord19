@@ -10,7 +10,7 @@ from random_sample import RandomSample
 from document_model import DocumentModel
 from iterable_tokenizer import IterableTokenizer
 from doc_tokenizers import doc_tokenizer
-from extra_funcs import big_number
+from extra_funcs import big_number, progress_msg
 from time_keeper import TimeKeeper
 
 
@@ -83,7 +83,7 @@ class Doc2VecCord19(DocumentModel):
                 self.corpus = corpus
             else:
                 if show_progress:
-                    print("Creating default CORD-19 corpus...")
+                    progress_msg("Creating default CORD-19 corpus...")
                 self.corpus = Papers(show_progress=show_progress)
 
             # Create an Iterable with the documents tagged.
@@ -96,7 +96,7 @@ class Doc2VecCord19(DocumentModel):
 
             # Create and Build the Model.
             if show_progress:
-                print("Building Doc2Vec model...")
+                progress_msg("Building Doc2Vec model...")
             self.doc2vec_model = doc2vec.Doc2Vec(vector_size=vector_dims,
                                                  min_count=2,
                                                  epochs=40)
@@ -104,7 +104,7 @@ class Doc2VecCord19(DocumentModel):
 
             # Train the Model.
             if show_progress:
-                print("Training Doc2Vec model...")
+                progress_msg("Training Doc2Vec model...")
             self.doc2vec_model.train(train_corpus,
                                      total_examples=self.doc2vec_model.corpus_count,
                                      epochs=self.doc2vec_model.epochs)
