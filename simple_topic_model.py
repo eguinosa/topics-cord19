@@ -4,7 +4,7 @@ import json
 import numpy as np
 from os.path import isdir, isfile, join
 
-from extra_funcs import progress_bar
+from extra_funcs import progress_bar, progress_msg
 from time_keeper import TimeKeeper
 
 
@@ -50,7 +50,7 @@ class SimpleTopicModel:
 
         # Load the Main Indexes.
         if show_progress:
-            print("Loading Topic Model's Index...")
+            progress_msg("Loading Topic Model's Index...")
         model_index_path = join(model_folder_path, self.model_index_file)
         if not isfile(model_index_path):
             raise FileNotFoundError(f"The Topic Model <{self.model_id}> has no Index available.")
@@ -70,7 +70,7 @@ class SimpleTopicModel:
 
         # Load the Topic's Embeddings.
         if show_progress:
-            print("Loading Topic's Embeddings...")
+            progress_msg("Loading Topic's Embeddings...")
         topic_index_path = join(model_folder_path, self.topic_embeds_file)
         if not isfile(topic_index_path):
             raise FileNotFoundError(f"The Topic Model <{self.model_id}> has no"
