@@ -6,7 +6,7 @@ from os.path import isdir, join, isfile
 from random import sample
 
 from papers import Papers
-from extra_funcs import progress_bar, big_number
+from extra_funcs import progress_bar, progress_msg, big_number
 from time_keeper import TimeKeeper
 
 
@@ -68,16 +68,16 @@ class PapersAnalyzer:
                 self.big_papers = json.load(file)
             # Show progress if required.
             if show_progress:
-                print("Loading the index of Papers by size...")
+                progress_msg("Loading the index of Papers by size...")
                 total = len(self.cord19_papers.papers_index)
                 progress_bar(total, total)
         else:
             # Create the indexes.
             if show_progress:
-                print("Classifying Papers by size...")
+                progress_msg("Classifying Papers by size...")
             indexes = self._organize_papers(show_progress=show_progress)
             if show_progress:
-                print("Saving Papers classifications...")
+                progress_msg("Saving Papers classifications...")
             # Get the Papers Indexes.
             self.small_papers = indexes[0]
             self.medium_papers = indexes[1]
