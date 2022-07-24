@@ -7,7 +7,7 @@ from os.path import join, isdir, isfile
 
 from corpus_cord19 import CorpusCord19
 from papers_analyzer import PapersAnalyzer
-from extra_funcs import progress_bar, big_number
+from extra_funcs import progress_bar, progress_msg, big_number
 from time_keeper import TimeKeeper
 
 
@@ -70,14 +70,14 @@ class RandomSample(CorpusCord19):
             with open(self.sample_index_path, 'r') as f:
                 self.sample_cord_uids = json.load(f)
             if show_progress:
-                print("Loading Sample...")
+                progress_msg("Loading Sample...")
                 progress_bar(1, 1)
         else:
             # Create a new Random Sample.
             self.sample_cord_uids = self._new_random_sample(paper_type=paper_type, sample_size=sample_size)
             # Progress
             if show_progress:
-                print("Creating new Random Sample...")
+                progress_msg("Creating new Random Sample...")
                 progress_bar(1, 1)
             # Save the new Sample Index.
             self.sample_index_path = join(sample_folder_path, self.default_index_file)
