@@ -10,7 +10,7 @@ from collections import deque
 from document_model import DocumentModel
 from papers import Papers
 from cord19_utilities import load_vocab_embeddings, embeds_title_abstract
-from extra_funcs import number_to_3digits, progress_bar
+from extra_funcs import progress_bar, progress_msg, number_to_3digits
 from time_keeper import TimeKeeper
 
 
@@ -77,12 +77,12 @@ class SpecterManager(DocumentModel):
             if self.full_dicts:
                 # Load full Dictionaries.
                 if show_progress:
-                    print("Loading all Paper' Embeddings to memory...")
+                    progress_msg("Loading all Paper' Embeddings to memory...")
                 paper_embeds_path = join(class_folder_path, self.papers_embeds_file)
                 with open(paper_embeds_path, 'r') as f:
                     paper_embeds = json.load(f)
                 if show_progress:
-                    print("Loading all the Vocabulary's Embeddings to memory...")
+                    progress_msg("Loading all the Vocabulary's Embeddings to memory...")
                 vocab_embeds_path = join(class_folder_path, self.vocab_embeds_file)
                 with open(vocab_embeds_path, 'r') as f:
                     vocab_embeds = json.load(f)
@@ -95,24 +95,24 @@ class SpecterManager(DocumentModel):
                 vocab_embeds = None
                 # Load Fragment's Index Dictionaries.
                 if show_progress:
-                    print("Loading Index of Paper's Embeddings...")
+                    progress_msg("Loading Index of Paper's Embeddings...")
                 papers_index_path = join(class_folder_path, self.papers_index_file)
                 with open(papers_index_path, 'r') as f:
                     paper_fragments_index = json.load(f)
                 if show_progress:
-                    print("Loading Index of Vocabulary's Embeddings...")
+                    progress_msg("Loading Index of Vocabulary's Embeddings...")
                 vocab_index_path = join(class_folder_path, self.vocab_index_file)
                 with open(vocab_index_path, 'r') as f:
                     vocab_fragments_index = json.load(f)
         else:
             # Load & Save Papers' Embeddings.
             if show_progress:
-                print("Creating instance of Papers() class...")
+                progress_msg("Creating instance of Papers() class...")
             corpus = Papers(show_progress=show_progress)
             papers_ids = list(corpus.papers_cord_uids())
             # Create dictionary with all the Paper's embeddings.
             if show_progress:
-                print("Loading paper's embeddings using Papers() class...")
+                progress_msg("Loading paper's embeddings using Papers() class...")
             # Progress Variables.
             count = 0
             total = len(papers_ids)
@@ -125,13 +125,13 @@ class SpecterManager(DocumentModel):
 
             # Save full dictionary with Paper's embeddings.
             if show_progress:
-                print("Saving Full Dictionary with the paper's embeddings...")
+                progress_msg("Saving Full Dictionary with the paper's embeddings...")
             paper_embeds_path = join(class_folder_path, self.papers_embeds_file)
             with open(paper_embeds_path, 'w') as f:
                 json.dump(paper_embeds, f)
             # Save Paper's embeddings in fragments.
             if show_progress:
-                print("Creating Index & Fragments of the paper's embeddings...")
+                progress_msg("Creating Index & Fragments of the paper's embeddings...")
             paper_fragments_index = create_embeddings_index(embeds_dict=paper_embeds,
                                                             folder_path=papers_folder_path,
                                                             file_prefix=self.papers_fragment_prefix,
@@ -144,17 +144,17 @@ class SpecterManager(DocumentModel):
 
             # Load & Save Vocabulary Embeddings.
             if show_progress:
-                print("Loading the vocabulary's embeddings...")
+                progress_msg("Loading the vocabulary's embeddings...")
             vocab_embeds = load_vocab_embeddings(embeds_title_abstract)
             # Save Full Dictionary with Vocabulary Embeddings.
             if show_progress:
-                print("Saving Full Dictionary of the vocabulary's embeddings...")
+                progress_msg("Saving Full Dictionary of the vocabulary's embeddings...")
             vocab_embeds_path = join(class_folder_path, self.vocab_embeds_file)
             with open(vocab_embeds_path, 'w') as f:
                 json.dump(vocab_embeds, f)
             # Save Vocabulary's Embeddings in Fragments.
             if show_progress:
-                print("Saving Index & Fragments of the vocabulary's embeddings...")
+                progress_msg("Saving Index & Fragments of the vocabulary's embeddings...")
             vocab_fragments_index = create_embeddings_index(embeds_dict=vocab_embeds,
                                                             folder_path=vocab_folder_path,
                                                             file_prefix=self.vocab_fragment_prefix,
@@ -168,7 +168,7 @@ class SpecterManager(DocumentModel):
         # Save the type of dicts we are going to use (Full/Fragmented)
         if self.full_dicts:
             if show_progress:
-                print("Using Full Embeddings' Dictionary.")
+                progress_msg("Using Full Embeddings' Dictionary.")
             self.full_paper_embeds = paper_embeds
             self.full_vocab_embeds = vocab_embeds
             self.paper_embeds_index = None
@@ -179,7 +179,7 @@ class SpecterManager(DocumentModel):
             self.vocab_dict_queue = None
         else:
             if show_progress:
-                print("Using Fragments to load the Embeddings' Dictionary.")
+                progress_msg("Using Fragments to load the Embeddings' Dictionary.")
             self.full_paper_embeds = None
             self.full_vocab_embeds = None
             self.paper_embeds_index = paper_fragments_index
