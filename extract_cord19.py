@@ -5,7 +5,7 @@ from os import mkdir
 from os.path import isdir, isfile, join
 
 from papers_analyzer import PapersAnalyzer
-from extra_funcs import progress_bar, big_number
+from extra_funcs import progress_bar, progress_msg, big_number
 from time_keeper import TimeKeeper
 
 
@@ -57,7 +57,7 @@ class ExtractCord19:
                 self.big_index = json.load(f)
             # Show progress.
             if show_progress:
-                print("Loading Papers indexes...")
+                progress_msg("Loading Papers indexes...")
                 progress_bar(3, 3)
         # Get papers' texts and create the texts' indexes.
         else:
@@ -71,7 +71,7 @@ class ExtractCord19:
             # Save texts for each of the papers' sizes.
             # Small Papers
             if show_progress:
-                print("Saving Small Papers...")
+                progress_msg("Saving Small Papers...")
             small_ids = list(papers.small_papers)
             small_texts = papers.cord19_papers.selected_papers_content(small_ids)
             self.small_index = _save_papers(self.small_papers_path,
@@ -80,7 +80,7 @@ class ExtractCord19:
                                             show_progress=show_progress)
             # Medium Papers
             if show_progress:
-                print("Saving Medium Papers...")
+                progress_msg("Saving Medium Papers...")
             medium_ids = list(papers.medium_papers)
             medium_texts = papers.cord19_papers.selected_papers_content(medium_ids)
             self.medium_index = _save_papers(self.medium_papers_path,
@@ -89,7 +89,7 @@ class ExtractCord19:
                                              show_progress=show_progress)
             # Big Papers
             if show_progress:
-                print("Saving Big Papers...")
+                progress_msg("Saving Big Papers...")
             big_ids = list(papers.big_papers)
             big_texts = papers.cord19_papers.selected_papers_content(big_ids)
             self.big_index = _save_papers(self.big_papers_path,
