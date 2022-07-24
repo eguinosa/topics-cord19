@@ -26,6 +26,17 @@ def progress_bar(progress, total):
         print()
 
 
+def progress_msg(message):
+    """
+    Display the provided 'message' to the user about the progress of the
+    program.
+
+    Args:
+        message: String with the message we have to display.
+    """
+    print(message)
+
+
 def big_number(number):
     """
     Add commas to number with more than 3 digits, so they are more easily read.
