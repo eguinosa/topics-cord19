@@ -7,7 +7,7 @@ from transformers import AutoTokenizer, AutoModel
 
 from document_model import DocumentModel
 from time_keeper import TimeKeeper
-from extra_funcs import progress_bar
+from extra_funcs import progress_bar, progress_msg
 
 
 class SpecterCord19(DocumentModel):
@@ -41,24 +41,24 @@ class SpecterCord19(DocumentModel):
         tokenizer_path = join(specter_folder_path, self.tokenizer_folder)
         if not isdir(tokenizer_path):
             if show_progress:
-                print("Downloading Tokenizer...")
+                progress_msg("Downloading Tokenizer...")
             self.tokenizer = AutoTokenizer.from_pretrained('allenai/specter')
             self.tokenizer.save_pretrained(tokenizer_path)
         else:
             if show_progress:
-                print("Loading Tokenizer...")
+                progress_msg("Loading Tokenizer...")
             self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
 
         # Load or Download model.
         model_path = join(specter_folder_path, self.model_folder)
         if not isdir(model_path):
             if show_progress:
-                print("Downloading Model...")
+                progress_msg("Downloading Model...")
             self.model = AutoModel.from_pretrained('allenai/specter')
             self.model.save_pretrained(model_path)
         else:
             if show_progress:
-                print("Loading Model...")
+                progress_msg("Loading Model...")
             self.model = AutoModel.from_pretrained(model_path)
 
     def model_type(self):
