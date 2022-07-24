@@ -8,9 +8,8 @@ from collections import defaultdict
 from random import choice
 
 from corpus_cord19 import CorpusCord19
-from extra_funcs import progress_bar
+from extra_funcs import progress_bar, progress_msg, number_to_3digits, big_number
 from time_keeper import TimeKeeper
-from extra_funcs import number_to_3digits, big_number
 
 
 class Papers(CorpusCord19):
@@ -60,13 +59,13 @@ class Papers(CorpusCord19):
                 self.papers_index = json.load(file)
             # Papers Content Progress.
             if show_progress:
-                print("Loading index of the papers' texts...")
+                progress_msg("Loading index of the papers' texts...")
                 total = len(self.papers_index)
                 progress_bar(total, total)
         else:
             # Announce what we are doing.
             if show_progress:
-                print("Creating index of the papers' texts...")
+                progress_msg("Creating index of the papers' texts...")
             # Create the index of the papers.
             self.papers_index = self._create_papers_index(show_progress=show_progress)
             # Save the Papers' Index
@@ -87,13 +86,13 @@ class Papers(CorpusCord19):
                 self.embeds_index = json.load(file)
             # Papers Embeddings Progress.
             if show_progress:
-                print("Loading index of papers' embeddings...")
+                progress_msg("Loading index of papers' embeddings...")
                 total = len(self.embeds_index)
                 progress_bar(total, total)
         else:
             # Announce what we are doing.
             if show_progress:
-                print("Creating index of the papers' embeddings...")
+                progress_msg("Creating index of the papers' embeddings...")
             # Save the embeddings of the papers and create an index of their
             # location.
             self.embeds_index = self._create_embeddings_index(embed_dicts=500, show_progress=show_progress)
