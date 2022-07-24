@@ -16,7 +16,7 @@ from bert_cord19 import BertCord19
 from specter_manager import SpecterManager
 from doc2vec_cord19 import Doc2VecCord19
 from doc_tokenizers import doc_tokenizer
-from extra_funcs import progress_bar, big_number
+from extra_funcs import progress_bar, progress_msg, big_number
 from time_keeper import TimeKeeper
 
 
@@ -83,7 +83,7 @@ class TopicModel:
 
             # Load Index Dictionary for basic attributes.
             if show_progress:
-                print("Loading Topic Model basic attributes...")
+                progress_msg("Loading Topic Model basic attributes...")
             model_index_path = join(model_folder_path, self.model_index_file)
             if not isfile(model_index_path):
                 raise FileNotFoundError("There is no Attributes Index available.")
@@ -104,7 +104,7 @@ class TopicModel:
 
             # Load Word Embeddings Dictionary.
             if show_progress:
-                print("Loading Topic Model's word embeddings...")
+                progress_msg("Loading Topic Model's word embeddings...")
             word_index_path = join(model_folder_path, self.word_embeds_file)
             if not isfile(word_index_path):
                 raise FileNotFoundError("There is no Word Embeddings available.")
@@ -123,7 +123,7 @@ class TopicModel:
 
             # Load Doc Embeddings Dictionary.
             if show_progress:
-                print("Loading Topic Model's doc embeddings...")
+                progress_msg("Loading Topic Model's doc embeddings...")
             doc_index_path = join(model_folder_path, self.doc_embeds_file)
             if not isfile(doc_index_path):
                 raise FileNotFoundError("There is no Doc Embeddings available.")
@@ -142,7 +142,7 @@ class TopicModel:
 
             # Load Topic Embeddings Dictionary.
             if show_progress:
-                print("Loading Topic's Embeddings...")
+                progress_msg("Loading Topic's Embeddings...")
             topic_index_path = join(model_folder_path, self.topic_embeds_file)
             if not isfile(topic_index_path):
                 raise FileNotFoundError("There is no Topic Embeddings available.")
@@ -179,22 +179,22 @@ class TopicModel:
 
             # Calculate the embeddings of the words and documents.
             if show_progress:
-                print("Creating Word Embeddings...")
+                progress_msg("Creating Word Embeddings...")
             self.word_embeds = self._create_word_embeddings(corpus, doc_model, show_progress=show_progress)
             if show_progress:
-                print("Creating Document Embeddings...")
+                progress_msg("Creating Document Embeddings...")
             self.doc_embeds = self._create_docs_embeddings(corpus, doc_model, show_progress=show_progress)
             if show_progress:
-                print("Finding Topics...")
+                progress_msg("Finding Topics...")
             self.topic_embeds = self._find_topics(show_progress=show_progress)
             self.num_topics = len(self.topic_embeds)
             if show_progress:
-                print(f"{self.num_topics} topics found.")
+                progress_msg(f"{self.num_topics} topics found.")
             if show_progress:
-                print("Organizing documents by topics...")
+                progress_msg("Organizing documents by topics...")
             self.topic_docs = find_child_embeddings(self.topic_embeds, self.doc_embeds)
             if show_progress:
-                print("Creating topics vocabulary...")
+                progress_msg("Creating topics vocabulary...")
             self.topic_words = find_child_embeddings(self.topic_embeds, self.word_embeds)
 
         # Create Default values for topics created with a fixed number of
@@ -233,8 +233,8 @@ class TopicModel:
             self.topics_hierarchy = None
             # Progress.
             if show_progress:
-                print("Invalid number of topics requested. No hierarchical topic"
-                      " reduction performed.")
+                progress_msg("Invalid number of topics requested. No"
+                             " hierarchical topic reduction performed.")
             # Exit function.
             return
 
@@ -253,7 +253,7 @@ class TopicModel:
             optimal_size = min(usable_sizes)
             # Upload The Reduced Topic Model.
             if show_progress:
-                print(f"Loading Reduced Topic Model with {optimal_size} topics...")
+                progress_msg(f"Loading Reduced Topic Model with {optimal_size} topics...")
             model_folder_name = self.model_folder_prefix + self.model_id
             reduced_topic_file = self.reduced_topic_prefix + str(optimal_size) + '.json'
             reduced_topic_path = join(self.data_folder, self.class_data_folder,
@@ -277,7 +277,7 @@ class TopicModel:
         while number_topics < current_num_topics:
             # Reduce the number of topics by 1.
             if show_progress:
-                print(f"Reducing from {current_num_topics} to {current_num_topics - 1} topics...")
+                progress_msg(f"Reducing from {current_num_topics} to {current_num_topics - 1} topics...")
             result_tuple = self._reduce_topic_size(ref_topic_embeds=new_topic_embeds,
                                                    topic_sizes=new_topic_sizes,
                                                    show_progress=show_progress)
@@ -287,7 +287,7 @@ class TopicModel:
 
         # Progress - Done with the reduction of Topics.
         if show_progress:
-            print(f"No need to reduce the current {current_num_topics} topics.")
+            progress_msg(f"No need to reduce the current {current_num_topics} topics.")
 
         # Update New Topics' Attributes.
         self.new_topics = True
@@ -298,18 +298,18 @@ class TopicModel:
                                       in enumerate(new_topic_embeds.values())])
         # Assign Words and Documents to the New Topics.
         if show_progress:
-            print("Organizing documents using the New Topics...")
+            progress_msg("Organizing documents using the New Topics...")
         self.new_topic_docs = find_child_embeddings(self.new_topic_embeds,
                                                     self.doc_embeds,
                                                     show_progress=show_progress)
         if show_progress:
-            print("Creating the vocabulary for the New Topics...")
+            progress_msg("Creating the vocabulary for the New Topics...")
         self.new_topic_words = find_child_embeddings(self.new_topic_embeds,
                                                      self.word_embeds,
                                                      show_progress=show_progress)
         # Assign Original Topics to the New Topics.
         if show_progress:
-            print("Assigning original topics to the New topics...")
+            progress_msg("Assigning original topics to the New topics...")
         self.topics_hierarchy = find_child_embeddings(self.new_topic_embeds,
                                                       self.topic_embeds,
                                                       show_progress=show_progress)
@@ -355,7 +355,7 @@ class TopicModel:
         ref_topic_embeds[close_topic_id] = merged_topic_embed
         # Get the new topic sizes.
         if show_progress:
-            print(f"Creating sizes for the new {len(ref_topic_embeds)} topics...")
+            progress_msg(f"Creating sizes for the new {len(ref_topic_embeds)} topics...")
         new_topic_sizes = self._topic_document_count(ref_topic_embeds, show_progress=show_progress)
         # New Dictionaries with embeds and sizes.
         return ref_topic_embeds, new_topic_sizes
@@ -564,14 +564,14 @@ class TopicModel:
 
         # Use UMAP to reduce the dimensions of the embeddings.
         if show_progress:
-            print("UMAP: Reducing dimensions of the papers...")
+            progress_msg("UMAP: Reducing dimensions of the papers...")
         umap_embeddings = umap.UMAP(n_neighbors=15,
                                     n_components=5,
                                     metric='cosine').fit_transform(doc_embeddings)
 
         # Use HDBSCAN to find the cluster of documents in the vector space.
         if show_progress:
-            print("HDBSCAN: Creating topic clusters with the documents...")
+            progress_msg("HDBSCAN: Creating topic clusters with the documents...")
         clusterer = hdbscan.HDBSCAN(min_cluster_size=15,
                                     metric='euclidean',
                                     cluster_selection_method='eom')
@@ -579,7 +579,7 @@ class TopicModel:
 
         # Save the embeddings per topic label.
         if show_progress:
-            print("Creating the topic's embeddings...")
+            progress_msg("Creating the topic's embeddings...")
         topic_labels = cluster_labels.labels_
         topic_label_embeds = {}
         for label, doc_embed in zip(topic_labels, doc_embeddings):
@@ -688,7 +688,7 @@ class TopicModel:
 
         # Create & Save Index Dictionary for basic attributes.
         if show_progress:
-            print("Saving Topic Model basic attributes...")
+            progress_msg("Saving Topic Model basic attributes...")
         topic_model_index = {
             'model_type': self.model_type,
             'num_topics': self.num_topics,
@@ -704,7 +704,7 @@ class TopicModel:
 
         # Progress Saving Dictionaries.
         if show_progress:
-            print("Saving embedding dictionaries of Topic Model...")
+            progress_msg("Saving embedding dictionaries of Topic Model...")
 
         # Save Word Embeddings, first transforming dict to python types.
         word_embeds_index = {}
@@ -819,11 +819,11 @@ class TopicModel:
 
         # Start Reducing Topics and Saving the Main Topic Sizes.
         if show_progress:
-            print("Saving Main Hierarchically Reduced Topic Models...")
+            progress_msg("Saving Main Hierarchically Reduced Topic Models...")
         while current_num_topics > 2:
             # Reduce number of topics by 1.
             if show_progress:
-                print(f"Reducing from {current_num_topics} to {current_num_topics - 1} topics...")
+                progress_msg(f"Reducing from {current_num_topics} to {current_num_topics - 1} topics...")
             result_tuple = self._reduce_topic_size(ref_topic_embeds=new_topic_embeds,
                                                    topic_sizes=new_topic_sizes,
                                                    show_progress=show_progress)
@@ -834,8 +834,8 @@ class TopicModel:
             # Check if we need to save the current embeddings and sizes.
             if current_num_topics in main_sizes:
                 if show_progress:
-                    print("<<Main Topic Found>>")
-                    print(f"Saving Reduced Topic Model with {current_num_topics} topics...")
+                    progress_msg("<<Main Topic Found>>")
+                    progress_msg(f"Saving Reduced Topic Model with {current_num_topics} topics...")
                 # Transform Embeddings to lists.
                 json_topic_embeds = {}
                 for topic_id, topic_embed in new_topic_embeds.items():
@@ -853,7 +853,7 @@ class TopicModel:
                     json.dump(reduced_topic_index, f)
                 # Progress.
                 if show_progress:
-                    print("<<Saved>>")
+                    progress_msg("<<Saved>>")
 
     def reduced_topics_saved(self):
         """
