@@ -146,6 +146,19 @@ class BertCord19(DocumentModel):
         result = self.model.encode(word)
         return result
 
+    def words_vectors(self, words):
+        """
+        Get the vectors for the words inside the iterable 'words'.
+
+        Args:
+            words: Iterable with the words we have to encode.
+
+        Returns:
+            List with the embeddings of the words.
+        """
+        result = self.model.encode(words)
+        return result
+
     def document_vector(self, doc_text):
         """
         Transform the text of a document into a vector.
@@ -157,6 +170,19 @@ class BertCord19(DocumentModel):
             The vector of the document.
         """
         result = self.model.encode(doc_text)
+        return result
+
+    def documents_vectors(self, documents):
+        """
+        Get the embeddings of the documents inside the iterable 'documents'.
+
+        Args:
+            documents: Iterable containing the string we will encode.
+
+        Returns:
+            List with the embeddings of the documents.
+        """
+        result = self.model.encode(documents)
         return result
 
 
