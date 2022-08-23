@@ -3,6 +3,7 @@
 import json
 import umap
 import hdbscan
+import multiprocessing
 import numpy as np
 from os import mkdir, listdir
 from os.path import isdir, isfile, join
@@ -1024,7 +1025,7 @@ def closest_vector(embedding, vectors_dict: dict):
 
 
 def find_child_embeddings(parent_embeds: dict, child_embeds: dict,
-                          show_progress=False):
+                          parallelism=False, show_progress=False):
     """
     Given a 'parent_embeds' embeddings dictionary and a 'child_embeds'
     embeddings dictionary, create a new dictionary assigning each of the
@@ -1035,6 +1036,7 @@ def find_child_embeddings(parent_embeds: dict, child_embeds: dict,
             embeddings as values.
         child_embeds: Dictionary containing the child_ids as keys and their
             embeddings as values.
+        parallelism: Use the multiprocessing version of this function.
         show_progress: A Bool representing whether we show the progress of
             the function or not.
 
@@ -1042,7 +1044,11 @@ def find_child_embeddings(parent_embeds: dict, child_embeds: dict,
         Dictionary containing the parent_ids as keys, and a List of the closest
         child_ids to them in the embedding space as values.
     """
-    # Check if we have at least a Parent Dictionary.
+    # See if we have to use the multiprocessing version.
+    if parallelism:
+        return find_children_parallel(parent_embeds, child_embeds, show_progress)
+
+    # Check if we have at least one Parent Dictionary.
     if len(parent_embeds) == 0:
         return {}
 
@@ -1069,6 +1075,103 @@ def find_child_embeddings(parent_embeds: dict, child_embeds: dict,
     for tuples_child_sim in parent_child_dict.values():
         tuples_child_sim.sort(key=lambda child_sim: child_sim[1], reverse=True)
     return parent_child_dict
+
+
+def find_children_parallel(parent_embeds: dict, child_embeds: dict,
+                           show_progress=False):
+    """
+    A version of find_child_embeddings() using parallelism.
+
+    Given a 'parent_embeds' embeddings dictionary and a 'child_embeds'
+    embeddings dictionary, create a new dictionary assigning each of the
+    child_ids to their closest parent_id in the embedding space.
+
+    Args:
+        parent_embeds: Dictionary containing the parent_ids as keys and their
+            embeddings as values.
+        child_embeds: Dictionary containing the child_ids as keys and their
+            embeddings as values.
+        show_progress: A Bool representing whether we show the progress of
+            the function or not.
+
+    Returns:
+        Dictionary containing the parent_ids as keys, and a List of the closest
+        child_ids to them in the embedding space as values.
+    """
+    # Check if we have at least one Parent Dictionary.
+    if len(parent_embeds) == 0:
+        return {}
+
+    # Get the number of cores in the machine.
+    core_count = multiprocessing.cpu_count()
+    # Create chunk size to process the tasks in the cores.
+    chunk_size = len(child_embeds) // (3 * core_count) + 1
+    # Create default Parent-Children dictionary.
+    parent_child_dict = {}
+    # Create tuple parameters.
+    tuple_params = [(child_id, child_embeds, parent_embeds) for child_id in child_embeds.keys()]
+
+    # Create the Processes Pool using all the available CPUs.
+    with multiprocessing.Pool() as pool:
+        # No need to report progress, use Pool.map()
+        if not show_progress:
+            # Find the closest parent to each child.
+            tuple_results = pool.map(_custom_closest_vector, tuple_params,
+                                     chunksize=chunk_size)
+            # Save the closest children to each Parent.
+            for child_id, parent_id, similarity in tuple_results:
+                # Check if we have found this parent before.
+                if parent_id in parent_child_dict:
+                    parent_child_dict[parent_id].append((child_id, similarity))
+                else:
+                    parent_child_dict[parent_id] = [(child_id, similarity)]
+        # Using Pool.imap(), we have to show the progress.
+        else:
+            # Progress Variables.
+            count = 0
+            total = len(child_embeds)
+            # Find the closest parent to each child.
+            for child_id, parent_id, similarity in pool.imap(_custom_closest_vector,
+                                                             tuple_params,
+                                                             chunksize=chunk_size):
+                # Check if we have found this parent before.
+                if parent_id in parent_child_dict:
+                    parent_child_dict[parent_id].append((child_id, similarity))
+                else:
+                    parent_child_dict[parent_id] = [(child_id, similarity)]
+                # Progress.
+                if show_progress:
+                    count += 1
+                    progress_bar(count, total)
+
+    # Sort Children's List by their similarity to their parents.
+    for tuples_child_sim in parent_child_dict.values():
+        tuples_child_sim.sort(key=lambda child_sim: child_sim[1], reverse=True)
+    return parent_child_dict
+
+
+def _custom_closest_vector(id_dicts_tuple):
+    """
+    Custom-made version of the method closest_vector to use in the method
+    find_children_parallel(), also a version of the find_child_embeddings()
+    function.
+
+    Take the 'child_id', and the child_embeds, parent_embeds inside the
+    'id_dicts_tuple' parameter, and find the closest parent embedding to the
+    child embedding with the provided 'id'.
+
+    Args:
+        id_dicts_tuple: Tuple containing
+            ('child_id', 'child_embeds', 'parent_embeds') to call the function
+            closest_vector().
+
+    Returns:
+        Tuple with the 'child_id', its closest 'parent_id' and their 'similarity'.
+    """
+    child_id, child_embeds, parent_embeds = id_dicts_tuple
+    child_embed = child_embeds[child_id]
+    parent_id, similarity = closest_vector(child_embed, parent_embeds)
+    return child_id, parent_id, similarity
 
 
 def cosine_similarity(a: np.ndarray, b: np.ndarray):
