@@ -21,6 +21,10 @@ from extra_funcs import progress_bar, progress_msg, big_number
 from time_keeper import TimeKeeper
 
 
+# The Core Multiplier to calculate the Chunk sizes when doing Parallelism.
+parallel_mult = 2
+
+
 class TopicModel:
     """
     Find the topics in the CORD-19 corpus using the method described in Top2Vec.
@@ -43,7 +47,7 @@ class TopicModel:
 
     def __init__(self, corpus: CorpusCord19 = None, doc_model: DocumentModel = None,
                  only_title_abstract=False, model_id=None, used_saved=False,
-                 show_progress=False):
+                 parallelism=False, show_progress=False):
         """
         Find the topics in the provided 'corpus' using 'doc_model' to get the
         embedding of the Documents and Words in the CORD-19 corpus selected.
@@ -63,6 +67,7 @@ class TopicModel:
             model_id: String with the ID that identifies the Topic Model.
             used_saved: A Bool to know if we need to load the Topic Model from
                 a file or recalculate it.
+            parallelism: Bool indicating if we have to use multiprocessing or not.
             show_progress: Bool representing whether we show the progress of
                 the function or not.
         """
@@ -181,7 +186,8 @@ class TopicModel:
             # Calculate the embeddings of the words and documents.
             if show_progress:
                 progress_msg("Creating Word Embeddings...")
-            self.word_embeds = self._create_word_embeddings(corpus, doc_model, show_progress=show_progress)
+            self.word_embeds = self._create_word_embeddings(corpus, doc_model,
+                                                            show_progress=show_progress)
             if show_progress:
                 progress_msg("Creating Document Embeddings...")
             self.doc_embeds = self._create_docs_embeddings(corpus, doc_model, show_progress=show_progress)
@@ -193,10 +199,16 @@ class TopicModel:
                 progress_msg(f"{self.num_topics} topics found.")
             if show_progress:
                 progress_msg("Organizing documents by topics...")
-            self.topic_docs = find_child_embeddings(self.topic_embeds, self.doc_embeds)
+            self.topic_docs = find_child_embeddings(parent_embeds=self.topic_embeds,
+                                                    child_embeds=self.doc_embeds,
+                                                    parallelism=parallelism,
+                                                    show_progress=show_progress)
             if show_progress:
                 progress_msg("Creating topics vocabulary...")
-            self.topic_words = find_child_embeddings(self.topic_embeds, self.word_embeds)
+            self.topic_words = find_child_embeddings(parent_embeds=self.topic_embeds,
+                                                     child_embeds=self.word_embeds,
+                                                     parallelism=parallelism,
+                                                     show_progress=show_progress)
 
         # Create Default values for topics created with a fixed number of
         # desired topics:
@@ -212,7 +224,7 @@ class TopicModel:
         # topics as values.
         self.topics_hierarchy = None
 
-    def generate_new_topics(self, number_topics: int, show_progress=False):
+    def generate_new_topics(self, number_topics: int, parallelism=False, show_progress=False):
         """
         Create a new Hierarchical Topic Model with specified number of topics
         (num_topics). The 'num_topics' need to be at least 2 topics, and be
@@ -220,6 +232,7 @@ class TopicModel:
 
         Args:
             number_topics: The desired topic count for the new Topic Model.
+            parallelism: Bool indicating if we have to use multiprocessing or not.
             show_progress: Bool representing whether we show the progress of
                 the function or not.
         """
@@ -302,17 +315,20 @@ class TopicModel:
             progress_msg("Organizing documents using the New Topics...")
         self.new_topic_docs = find_child_embeddings(self.new_topic_embeds,
                                                     self.doc_embeds,
+                                                    parallelism=parallelism,
                                                     show_progress=show_progress)
         if show_progress:
             progress_msg("Creating the vocabulary for the New Topics...")
         self.new_topic_words = find_child_embeddings(self.new_topic_embeds,
                                                      self.word_embeds,
+                                                     parallelism=parallelism,
                                                      show_progress=show_progress)
         # Assign Original Topics to the New Topics.
         if show_progress:
             progress_msg("Assigning original topics to the New topics...")
         self.topics_hierarchy = find_child_embeddings(self.new_topic_embeds,
                                                       self.topic_embeds,
+                                                      parallelism=parallelism,
                                                       show_progress=show_progress)
 
     def _reduce_topic_size(self, ref_topic_embeds: dict, topic_sizes: dict,
@@ -453,10 +469,11 @@ class TopicModel:
         # Per topic, a list with the words and their similarity to the topic.
         return topics_top_words
 
-    def _create_word_embeddings(self, corpus: CorpusCord19,
-                                doc_model: DocumentModel, show_progress=False):
+    def _create_word_embeddings(self, corpus: CorpusCord19, doc_model: DocumentModel,
+                                show_progress=False):
         """
-        Create a dictionary with all the words in the corpus and their embeddings.
+        Create a dictionary with all the words in the corpus and their
+        embeddings.
 
         Args:
             corpus: A Cord-19 Corpus class with the selection of papers in the
@@ -485,6 +502,7 @@ class TopicModel:
             doc_tokens = doc_tokenizer(doc_content)
             # Add the new words from the document.
             for doc_word in doc_tokens:
+                # Skip if we already have the embedding of the word.
                 if doc_word not in words_embeddings:
                     word_embed = doc_model.word_vector(doc_word)
                     # Ignore words that the model can't encode (Zero Values).
@@ -1105,7 +1123,7 @@ def find_children_parallel(parent_embeds: dict, child_embeds: dict,
     # Get the number of cores in the machine.
     core_count = multiprocessing.cpu_count()
     # Create chunk size to process the tasks in the cores.
-    chunk_size = len(child_embeds) // (3 * core_count) + 1
+    chunk_size = len(child_embeds) // (parallel_mult * core_count) + 1
     # Create default Parent-Children dictionary.
     parent_child_dict = {}
     # Create tuple parameters.
@@ -1410,17 +1428,17 @@ if __name__ == '__main__':
     # sample = RandomSample.load(show_progress=True)
 
     # Load RandomSample() saved with an id.
-    sample_id = '25000_docs'
+    sample_id = '3000_docs'
     print(f"Loading Saved Random Sample <{sample_id}>...")
     sample = RandomSample.load(sample_id=sample_id, show_progress=True)
-
+    # ---------------------------------------------
     # # Use CORD-19 Dataset
     # print("\nLoading the CORD-19 Dataset...")
     # sample = Papers(show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
-    # Confirm amount of papers in the corpus.
+    # -- Report amount of papers in the loaded Corpus --
     papers_count = len(sample.papers_cord_uids())
     print(f"\n{big_number(papers_count)} papers loaded.")
 
@@ -1428,13 +1446,13 @@ if __name__ == '__main__':
     # Use BERT Document Model.
     print("\nLoading Bert Model...")
     # bert_name = 'all-MiniLM-L12-v2'
-    bert_name = 'paraphrase-MiniLM-L3-v2'
+    bert_name = 'paraphrase-MiniLM-L3-v2'  # Fastest model.
     my_model = BertCord19(model_name=bert_name, show_progress=True)
-
+    # ---------------------------------------------
     # # Use Specter Document Model.
     # print("\nLoading Specter model...")
     # my_model = SpecterManager(show_progress=True)
-
+    # ---------------------------------------------
     # Use Doc2Vec Model trained with Cord-19 papers.
     # print("\nLoading Doc2Vec model of the Cord-19 Dataset...")
     # my_model = Doc2VecCord19.load('cord19_dataset', show_progress=True)
@@ -1444,23 +1462,25 @@ if __name__ == '__main__':
     # -- Load Topic Model --
     # the_model_id = 'testing_' + my_model.model_type()
     the_model_id = f'test_{my_model.model_type()}_{sample_id}'
-
+    # ---------------------------------------------
     # Creating Topic Model.
     print(f"\nCreating Topic Model with ID <{the_model_id}>...")
     the_topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True,
-                                 model_id=the_model_id, show_progress=True)
-    print(f"Saving Topic Model with ID <{the_topic_model.model_id}>")
-    the_topic_model.save(show_progress=True)
-
+                                 model_id=the_model_id, parallelism=False, show_progress=True)
+    # ---------------------------------------------
+    # print(f"Saving Topic Model with ID <{the_topic_model.model_id}>")
+    # the_topic_model.save(show_progress=True)
+    # ---------------------------------------------
     # # Loading Saved Topic Model.
     # the_model_id = 'test_bert_25000_docs'
     # the_topic_model = TopicModel.load(model_id=the_model_id, show_progress=True)
-    # print("Done.")
-    # print(f"[{stopwatch.formatted_runtime()}]")
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
 
+    # -- Show the Topics Created --
     total_topics = the_topic_model.num_topics
     print(f"\n{total_topics} topics found.")
-
+    # ---------------------------------------------
     print("\nTopics and Document count:")
     all_topics = the_topic_model.top_topics()
     for topic_and_size in all_topics:
