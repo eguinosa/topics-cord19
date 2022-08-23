@@ -1,6 +1,7 @@
 # Gelin Eguinosa Rosique
 
 from sys import stdout
+from time import time, ctime
 
 
 def progress_bar(progress, total):
@@ -34,7 +35,20 @@ def progress_msg(message):
     Args:
         message: String with the message we have to display.
     """
-    print(message)
+    print(f"[{time_info()}] {message}")
+
+
+def time_info():
+    """
+    Create a string with the time data in the format hh:mm:ss.mss.
+
+    Returns: String with the time data.
+    """
+    current_time = time()
+    millisecond = int((current_time - int(current_time)) * 1000)
+    # Format HH:MM:SS.MSS
+    time_data = ctime(current_time)[11:19] + '.' + number_to_3digits(millisecond)
+    return time_data
 
 
 def big_number(number):
