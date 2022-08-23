@@ -183,11 +183,7 @@ class TopicModel:
             if self.model_type not in self.supported_doc_models:
                 raise NameError(f"The model type <{self.model_type}> is not supported.")
 
-            # Calculate the embeddings of the words and documents.
-            if show_progress:
-                progress_msg("Creating Word Embeddings...")
-            self.word_embeds = self._create_word_embeddings(corpus, doc_model,
-                                                            show_progress=show_progress)
+            # Create the embeddings of the documents and find the topics.
             if show_progress:
                 progress_msg("Creating Document Embeddings...")
             self.doc_embeds = self._create_docs_embeddings(corpus, doc_model, show_progress=show_progress)
@@ -203,6 +199,10 @@ class TopicModel:
                                                     child_embeds=self.doc_embeds,
                                                     parallelism=parallelism,
                                                     show_progress=show_progress)
+            # Create the embeddings of the Words to make the topics' vocabulary.
+            if show_progress:
+                progress_msg("Creating Word Embeddings...")
+            self.word_embeds = self._create_word_embeddings(corpus, doc_model, show_progress=show_progress)
             if show_progress:
                 progress_msg("Creating topics vocabulary...")
             self.topic_words = find_child_embeddings(parent_embeds=self.topic_embeds,
@@ -501,14 +501,10 @@ class TopicModel:
         for doc_content in content_provider:
             doc_tokens = doc_tokenizer(doc_content)
             # Add the new words from the document.
-            for doc_word in doc_tokens:
-                # Skip if we already have the embedding of the word.
-                if doc_word not in words_embeddings:
-                    word_embed = doc_model.word_vector(doc_word)
-                    # Ignore words that the model can't encode (Zero Values).
-                    if not np.any(word_embed):
-                        continue
-                    words_embeddings[doc_word] = word_embed
+            new_words = [word for word in doc_tokens if word not in words_embeddings]
+            new_embeds = doc_model.words_vectors(new_words)
+            for new_word, new_embed in zip(new_words, new_embeds):
+                words_embeddings[new_word] = new_embed
             # Show Progress.
             if show_progress:
                 count += 1
@@ -535,30 +531,55 @@ class TopicModel:
             A dictionary containing the cord_uids of the documents in the CORD-19
                 sample and their embeddings.
         """
+        # Default dict to store the doc's embeddings.
+        doc_embeddings = {}
+        # Batch Size to process documents in groups. (Speeding Up)
+        batch_size = len(self.corpus_ids) // 100 + 1
+
         # Progress Bar variables.
         count = 0
         total = len(self.corpus_ids)
-
-        docs_embeddings = {}
+        # Process the documents in batches to speed up process.
+        processed_docs = 0
+        total_docs = len(self.corpus_ids)
+        batch_count = 0
+        batch_ids = []
+        batch_docs = []
         for cord_uid in self.corpus_ids:
-            # Depending on the model, select the content of the paper to encode.
+            # Get Doc's content depending on the model type.
             if self.model_type == 'specter':
-                # Using the Specter Manager Now.
-                doc_embedding = doc_model.document_vector(cord_uid)
+                # Use the doc ID to get their pre-calculated embedding.
+                doc_content = cord_uid
             elif self.use_title_abstract or self.model_type == 'bert':
-                # BERT has a length limit, use only title and abstract.
+                # Bert only support a limited amount of word count.
                 doc_content = corpus.paper_title_abstract(cord_uid)
-                doc_embedding = doc_model.document_vector(doc_content)
             elif self.model_type in {'doc2vec', 'glove'}:
-                # No text size or token count restrictions, use all text.
+                # The previous case includes when Doc2Vec and title_abstract.
                 doc_content = corpus.paper_content(cord_uid)
-                doc_embedding = doc_model.document_vector(doc_content)
             else:
+                # Using a not supported model.
                 raise NameError(f"We don't support the Model<{self.model_type}> yet.")
 
-            # Save Doc Embedding, skipping Docs that the model can't encode.
-            if np.any(doc_embedding):
-                docs_embeddings[cord_uid] = doc_embedding
+            # Add new ID and document to the batch.
+            batch_count += 1
+            processed_docs += 1
+            batch_ids.append(cord_uid)
+            batch_docs.append(doc_content)
+
+            # See if this the last document or the batch is full.
+            if batch_count == batch_size or processed_docs == total_docs:
+                # Get the encodings of the documents.
+                new_embeddings = doc_model.documents_vectors(batch_docs)
+                # Add new embeddings to dictionary.
+                for new_id, new_embed in zip(batch_ids, new_embeddings):
+                    # Skip documents with empty encodings.
+                    if not np.any(new_embed):
+                        continue
+                    doc_embeddings[new_id] = new_embed
+                # Reset batch list and counter.
+                batch_count = 0
+                batch_ids = []
+                batch_docs = []
 
             # Progress.
             if show_progress:
@@ -566,7 +587,7 @@ class TopicModel:
                 progress_bar(count, total)
 
         # The dictionary with the Docs IDs and their embeddings.
-        return docs_embeddings
+        return doc_embeddings
 
     def _find_topics(self, show_progress=False):
         """
@@ -1428,7 +1449,7 @@ if __name__ == '__main__':
     # sample = RandomSample.load(show_progress=True)
 
     # Load RandomSample() saved with an id.
-    sample_id = '3000_docs'
+    sample_id = '5000_docs'
     print(f"Loading Saved Random Sample <{sample_id}>...")
     sample = RandomSample.load(sample_id=sample_id, show_progress=True)
     # ---------------------------------------------
@@ -1474,7 +1495,7 @@ if __name__ == '__main__':
     # # Loading Saved Topic Model.
     # the_model_id = 'test_bert_25000_docs'
     # the_topic_model = TopicModel.load(model_id=the_model_id, show_progress=True)
-    print("Done.")
+    progress_msg("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
     # -- Show the Topics Created --
