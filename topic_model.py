@@ -47,7 +47,7 @@ class TopicModel:
 
     def __init__(self, corpus: CorpusCord19 = None, doc_model: DocumentModel = None,
                  only_title_abstract=False, model_id=None, used_saved=False,
-                 parallelism=False, show_progress=False):
+                 show_progress=False):
         """
         Find the topics in the provided 'corpus' using 'doc_model' to get the
         embedding of the Documents and Words in the CORD-19 corpus selected.
@@ -67,7 +67,6 @@ class TopicModel:
             model_id: String with the ID that identifies the Topic Model.
             used_saved: A Bool to know if we need to load the Topic Model from
                 a file or recalculate it.
-            parallelism: Bool indicating if we have to use multiprocessing or not.
             show_progress: Bool representing whether we show the progress of
                 the function or not.
         """
@@ -197,7 +196,7 @@ class TopicModel:
                 progress_msg("Organizing documents by topics...")
             self.topic_docs = find_child_embeddings(parent_embeds=self.topic_embeds,
                                                     child_embeds=self.doc_embeds,
-                                                    parallelism=parallelism,
+                                                    parallelism=False,  # conflict with huggingface/tokenizers
                                                     show_progress=show_progress)
             # Create the embeddings of the Words to make the topics' vocabulary.
             if show_progress:
@@ -207,7 +206,7 @@ class TopicModel:
                 progress_msg("Creating topics vocabulary...")
             self.topic_words = find_child_embeddings(parent_embeds=self.topic_embeds,
                                                      child_embeds=self.word_embeds,
-                                                     parallelism=parallelism,
+                                                     parallelism=False,  # conflict with huggingface/tokenizers
                                                      show_progress=show_progress)
 
         # Create Default values for topics created with a fixed number of
@@ -1487,13 +1486,14 @@ if __name__ == '__main__':
     # Creating Topic Model.
     print(f"\nCreating Topic Model with ID <{the_model_id}>...")
     the_topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True,
-                                 model_id=the_model_id, parallelism=False, show_progress=True)
+                                 model_id=the_model_id, show_progress=True)
     # ---------------------------------------------
-    # print(f"Saving Topic Model with ID <{the_topic_model.model_id}>")
-    # the_topic_model.save(show_progress=True)
+    print(f"Saving Topic Model with ID <{the_topic_model.model_id}>")
+    new_model_id = the_model_id + f"_{the_topic_model.num_topics}topics"
+    the_topic_model.save(model_id=new_model_id, show_progress=True)
     # ---------------------------------------------
     # # Loading Saved Topic Model.
-    # the_model_id = 'test_bert_25000_docs'
+    # # the_model_id = 'test_bert_25000_docs'
     # the_topic_model = TopicModel.load(model_id=the_model_id, show_progress=True)
     progress_msg("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
