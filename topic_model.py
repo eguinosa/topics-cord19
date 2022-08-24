@@ -7,6 +7,7 @@ import multiprocessing
 import numpy as np
 from os import mkdir, listdir
 from os.path import isdir, isfile, join
+from collections import defaultdict
 from numpy.linalg import norm
 
 from corpus_cord19 import CorpusCord19
@@ -22,7 +23,9 @@ from time_keeper import TimeKeeper
 
 
 # The Core Multiplier to calculate the Chunk sizes when doing Parallelism.
-parallel_mult = 2
+PARALLEL_MULT = 2
+MAX_CORES = 8
+PEAK_SIZE = 150
 
 
 class TopicModel:
@@ -293,6 +296,7 @@ class TopicModel:
                 progress_msg(f"Reducing from {current_num_topics} to {current_num_topics - 1} topics...")
             result_tuple = self._reduce_topic_size(ref_topic_embeds=new_topic_embeds,
                                                    topic_sizes=new_topic_sizes,
+                                                   parallelism=parallelism,
                                                    show_progress=show_progress)
             new_topic_embeds, new_topic_sizes = result_tuple
             # Update Current Number of Topics.
@@ -331,7 +335,7 @@ class TopicModel:
                                                       show_progress=show_progress)
 
     def _reduce_topic_size(self, ref_topic_embeds: dict, topic_sizes: dict,
-                           show_progress=False):
+                           parallelism=False, show_progress=False):
         """
         Reduce the provided Topics in 'ref_topic_embeds' by 1, mixing the
         smallest topic with its closest neighbor.
@@ -342,6 +346,8 @@ class TopicModel:
                 reference and will be modified to store the new reduced topics.
             topic_sizes: Dictionary containing the current size of the topics we
                 are reducing.
+            parallelism: Bool to indicate if we have to use the multiprocessing
+                version of this function.
             show_progress: A Bool representing whether we show the progress of
                 the function or not.
 
@@ -372,7 +378,9 @@ class TopicModel:
         # Get the new topic sizes.
         if show_progress:
             progress_msg(f"Creating sizes for the new {len(ref_topic_embeds)} topics...")
-        new_topic_sizes = self._topic_document_count(ref_topic_embeds, show_progress=show_progress)
+        new_topic_sizes = self._topic_document_count(ref_topic_embeds,
+                                                     parallelism=parallelism,
+                                                     show_progress=show_progress)
         # New Dictionaries with embeds and sizes.
         return ref_topic_embeds, new_topic_sizes
 
@@ -649,8 +657,58 @@ class TopicModel:
         # The embeddings of the topics.
         return topic_embeddings
 
-    def _topic_document_count(self, topic_embeds_dict: dict, show_progress=False):
+    def _topic_document_count(self, topic_embeds_dict: dict, parallelism=False,
+                              show_progress=False):
         """
+        Given a dictionary with the embeddings of a group of topics, count the
+        number of documents assign to each of the topics in the given dictionary.
+
+        Args:
+            topic_embeds_dict: Dictionary with the topic IDs as keys and the
+                embeddings of the topics as values.
+            parallelism: Bool to indicate if we have to use the multiprocessing
+                version of this function.
+            show_progress: A Bool representing whether we show the progress of
+                the function or not.
+
+        Returns:
+            Dictionary containing the topic IDs as keys and the number of
+                documents belonging to each one in the current corpus.
+        """
+        # Check if multiprocessing was requested, and we have enough topics.
+        parallel_min = int(2 * PEAK_SIZE / MAX_CORES)
+        if parallelism and len(topic_embeds_dict) > parallel_min:
+            return self._document_count_parallel(topic_embeds_dict, show_progress)
+
+        # Check we have at least a topic.
+        if len(topic_embeds_dict) == 0:
+            return {}
+
+        # Progress Variables.
+        count = 0
+        total = len(self.doc_embeds)
+        # Iterate through the documents and their embeddings.
+        topic_docs_count = {}
+        for doc_id, doc_embed in self.doc_embeds.items():
+            # Find the closest topic to the current document.
+            topic_id, _ = closest_vector(doc_embed, topic_embeds_dict)
+            # Check if we have found this topic before.
+            if topic_id in topic_docs_count:
+                topic_docs_count[topic_id] += 1
+            else:
+                topic_docs_count[topic_id] = 1
+            # Show Progress:
+            if show_progress:
+                count += 1
+                progress_bar(count, total)
+
+        # The document count per each topic.
+        return topic_docs_count
+
+    def _document_count_parallel(self, topic_embeds_dict: dict, show_progress=False):
+        """
+        Version of _topic_document_count() using MultiProcessing.
+
         Given a dictionary with the embeddings of a group of topics, count the
         number of documents assign to each of the topics in the given dictionary.
 
@@ -668,25 +726,39 @@ class TopicModel:
         if len(topic_embeds_dict) == 0:
             return {}
 
-        # Progress Variables.
-        count = 0
-        total = len(self.doc_embeds)
-        # Iterate through the documents and their embeddings.
-        topic_docs_count = {}
-        for doc_id, doc_embed in self.doc_embeds.items():
-            # Find the closest topic to the current document.
-            topic_id, _ = closest_vector(doc_embed, topic_embeds_dict)
-            # Check if we have found this topic before.
-            if topic_id in topic_docs_count:
-                topic_docs_count[topic_id] += 1
-            else:
-                topic_docs_count[topic_id] = 0
-            # Show Progress:
+        # Determine the number of cores.
+        optimal_cores = min(multiprocessing.cpu_count(), MAX_CORES)
+        efficiency_mult = min(float(1), len(topic_embeds_dict) / PEAK_SIZE)
+        core_count = max(2, int(efficiency_mult * optimal_cores))
+        # Number of instructions processed in one batch.
+        chunk_size = max(1, len(self.doc_embeds) // 100)
+        # chunk_size = max(1, len(self.doc_embeds) // (PARALLEL_MULT * core_count))
+
+        # Dictionary for the Topic-Docs count.
+        topic_docs_count = defaultdict(int)
+        # Create parameter tuples for _custom_closest_vector().
+        tuple_params = [(doc_id, doc_embed, topic_embeds_dict)
+                        for doc_id, doc_embed in self.doc_embeds.items()]
+        with multiprocessing.Pool(processes=core_count) as pool:
+            # Pool map() vs imap() depending on if we have to report progress.
             if show_progress:
-                count += 1
-                progress_bar(count, total)
+                # Progress Variables.
+                count = 0
+                total = len(self.doc_embeds)
+                # Iterate through the results to update the process.
+                for doc_id, topic_id, _ in pool.imap(_custom_closest_vector, tuple_params, chunksize=chunk_size):
+                    topic_docs_count[topic_id] += 1
+                    # Progress.
+                    count += 1
+                    progress_bar(count, total)
+            else:
+                # Process all the parameters at once (faster).
+                tuple_results = pool.map(_custom_closest_vector, tuple_params, chunksize=chunk_size)
+                for doc_id, topic_id, _ in tuple_results:
+                    topic_docs_count[topic_id] += 1
 
         # The document count per each topic.
+        topic_docs_count = dict(topic_docs_count)
         return topic_docs_count
 
     def save(self, model_id: str = None, show_progress=False):
@@ -809,7 +881,7 @@ class TopicModel:
         with open(basic_index_path, 'w') as f:
             json.dump(basic_index, f)
 
-    def save_reduced_topics(self, show_progress=False):
+    def save_reduced_topics(self, parallelism=False, show_progress=False):
         """
         Create a list of basic topic sizes between 2 and the size of the current
         Topic Model, to create and save the Hierarchical Topic Models of this
@@ -825,6 +897,8 @@ class TopicModel:
           - Step of 50 between 300 and 1000.
 
         Args:
+            parallelism: Bool to indicate if we have to use the multiprocessing
+                version of this function.
             show_progress:  A Bool representing whether we show the progress of
                 the function or not.
         """
@@ -865,6 +939,7 @@ class TopicModel:
                 progress_msg(f"Reducing from {current_num_topics} to {current_num_topics - 1} topics...")
             result_tuple = self._reduce_topic_size(ref_topic_embeds=new_topic_embeds,
                                                    topic_sizes=new_topic_sizes,
+                                                   parallelism=parallelism,
                                                    show_progress=show_progress)
             new_topic_embeds, new_topic_sizes = result_tuple
             # Update current number of topics.
@@ -1083,7 +1158,8 @@ def find_child_embeddings(parent_embeds: dict, child_embeds: dict,
         child_ids to them in the embedding space as values.
     """
     # See if we have to use the multiprocessing version.
-    if parallelism:
+    parallel_min = int(2 * PEAK_SIZE / MAX_CORES)
+    if parallelism and len(parent_embeds) > parallel_min:
         return find_children_parallel(parent_embeds, child_embeds, show_progress)
 
     # Check if we have at least one Parent Dictionary.
@@ -1140,29 +1216,28 @@ def find_children_parallel(parent_embeds: dict, child_embeds: dict,
     if len(parent_embeds) == 0:
         return {}
 
-    # Get the number of cores in the machine.
-    core_count = multiprocessing.cpu_count()
+    # Determine the number of cores to be used.
+    optimal_cores = min(multiprocessing.cpu_count(), MAX_CORES)
+    efficiency_mult = min(float(1), len(parent_embeds) / PEAK_SIZE)
+    core_count = max(2, int(efficiency_mult * optimal_cores))
     # Create chunk size to process the tasks in the cores.
-    chunk_size = len(child_embeds) // (parallel_mult * core_count) + 1
-    # Create default Parent-Children dictionary.
-    parent_child_dict = {}
+    chunk_size = max(1, len(child_embeds) // 100)
+    # chunk_size = max(1, len(child_embeds) // (PARALLEL_MULT * core_count))
     # Create tuple parameters.
-    tuple_params = [(child_id, child_embeds, parent_embeds) for child_id in child_embeds.keys()]
+    tuple_params = [(child_id, child_embed, parent_embeds)
+                    for child_id, child_embed in child_embeds.items()]
 
+    # Create default Parent-Children dictionary.
+    parent_child_dict = defaultdict(list)
     # Create the Processes Pool using all the available CPUs.
-    with multiprocessing.Pool() as pool:
+    with multiprocessing.Pool(processes=core_count) as pool:
         # No need to report progress, use Pool.map()
         if not show_progress:
             # Find the closest parent to each child.
-            tuple_results = pool.map(_custom_closest_vector, tuple_params,
-                                     chunksize=chunk_size)
+            tuple_results = pool.map(_custom_closest_vector, tuple_params, chunksize=chunk_size)
             # Save the closest children to each Parent.
             for child_id, parent_id, similarity in tuple_results:
-                # Check if we have found this parent before.
-                if parent_id in parent_child_dict:
-                    parent_child_dict[parent_id].append((child_id, similarity))
-                else:
-                    parent_child_dict[parent_id] = [(child_id, similarity)]
+                parent_child_dict[parent_id].append((child_id, similarity))
         # Using Pool.imap(), we have to show the progress.
         else:
             # Progress Variables.
@@ -1172,17 +1247,15 @@ def find_children_parallel(parent_embeds: dict, child_embeds: dict,
             for child_id, parent_id, similarity in pool.imap(_custom_closest_vector,
                                                              tuple_params,
                                                              chunksize=chunk_size):
-                # Check if we have found this parent before.
-                if parent_id in parent_child_dict:
-                    parent_child_dict[parent_id].append((child_id, similarity))
-                else:
-                    parent_child_dict[parent_id] = [(child_id, similarity)]
+                # Add the child to its closest parent.
+                parent_child_dict[parent_id].append((child_id, similarity))
                 # Progress.
                 if show_progress:
                     count += 1
                     progress_bar(count, total)
 
     # Sort Children's List by their similarity to their parents.
+    parent_child_dict = dict(parent_child_dict)
     for tuples_child_sim in parent_child_dict.values():
         tuples_child_sim.sort(key=lambda child_sim: child_sim[1], reverse=True)
     return parent_child_dict
@@ -1194,20 +1267,19 @@ def _custom_closest_vector(id_dicts_tuple):
     find_children_parallel(), also a version of the find_child_embeddings()
     function.
 
-    Take the 'child_id', and the child_embeds, parent_embeds inside the
+    Take the 'child_id' and 'child_embed', with the parent_embeds inside the
     'id_dicts_tuple' parameter, and find the closest parent embedding to the
-    child embedding with the provided 'id'.
+    child embedding with the provided 'child_id'.
 
     Args:
         id_dicts_tuple: Tuple containing
-            ('child_id', 'child_embeds', 'parent_embeds') to call the function
+            ('child_id', 'child_embed', 'parent_embeds') to call the function
             closest_vector().
 
     Returns:
         Tuple with the 'child_id', its closest 'parent_id' and their 'similarity'.
     """
-    child_id, child_embeds, parent_embeds = id_dicts_tuple
-    child_embed = child_embeds[child_id]
+    child_id, child_embed, parent_embeds = id_dicts_tuple
     parent_id, similarity = closest_vector(child_embed, parent_embeds)
     return child_id, parent_id, similarity
 
@@ -1448,7 +1520,7 @@ if __name__ == '__main__':
     # sample = RandomSample.load(show_progress=True)
 
     # Load RandomSample() saved with an id.
-    sample_id = '5000_docs'
+    sample_id = '25000_docs'
     print(f"Loading Saved Random Sample <{sample_id}>...")
     sample = RandomSample.load(sample_id=sample_id, show_progress=True)
     # ---------------------------------------------
@@ -1480,21 +1552,22 @@ if __name__ == '__main__':
     print(f"[{stopwatch.formatted_runtime()}]")
 
     # -- Load Topic Model --
-    # the_model_id = 'testing_' + my_model.model_type()
-    the_model_id = f'test_{my_model.model_type()}_{sample_id}'
+    # # the_model_id = 'testing_' + my_model.model_type()
+    # the_model_id = f'test_{my_model.model_type()}_{sample_id}'
     # ---------------------------------------------
-    # Creating Topic Model.
-    print(f"\nCreating Topic Model with ID <{the_model_id}>...")
-    the_topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True,
-                                 model_id=the_model_id, show_progress=True)
+    # # Creating Topic Model.
+    # print(f"\nCreating Topic Model with ID <{the_model_id}>...")
+    # the_topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True,
+    #                              model_id=the_model_id, show_progress=True)
     # ---------------------------------------------
-    print(f"Saving Topic Model with ID <{the_topic_model.model_id}>")
-    new_model_id = the_model_id + f"_{the_topic_model.num_topics}topics"
-    the_topic_model.save(model_id=new_model_id, show_progress=True)
+    # print(f"Saving Topic Model with ID <{the_topic_model.model_id}>")
+    # new_model_id = the_model_id + f"_{the_topic_model.num_topics}topics"
+    # the_topic_model.save(model_id=new_model_id, show_progress=True)
     # ---------------------------------------------
     # # Loading Saved Topic Model.
-    # # the_model_id = 'test_bert_25000_docs'
-    # the_topic_model = TopicModel.load(model_id=the_model_id, show_progress=True)
+    the_model_id = 'test_bert_25000_docs_196topics_parallel'
+    the_topic_model = TopicModel.load(model_id=the_model_id, show_progress=True)
+    # ---------------------------------------------
     progress_msg("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
@@ -1515,12 +1588,12 @@ if __name__ == '__main__':
     # #     for word_sim in word_list:
     # #         print(word_sim)
 
-    # # --Test Creating Hierarchically Reduced Topics--
-    # # Save the Hierarchically Reduced Topic Models.
-    # print("\nSaving Topic Model's Topic Hierarchy...")
-    # the_topic_model.save_reduced_topics(show_progress=True)
-    # # Update Basic Info of the Model.
-    # the_topic_model.save_basic_info()
+    # --Test Creating Hierarchically Reduced Topics--
+    # Save the Hierarchically Reduced Topic Models.
+    print("\nSaving Topic Model's Topic Hierarchy...")
+    the_topic_model.save_reduced_topics(parallelism=True, show_progress=True)
+    # Update Basic Info of the Model.
+    the_topic_model.save_basic_info()
 
     # new_topics = 7
     # print(f"\nCreating Topic Model with {new_topics} topics.")
