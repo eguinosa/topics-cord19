@@ -108,18 +108,17 @@ class BertCord19(DocumentModel):
 
         # Load or Download Model.
         self.model_path = join(self.models_folder, self.model_name)
-        if isdir(self.model_path):
-            # The Model is available locally.
-            self.model = SentenceTransformer(self.model_path)
-            if show_progress:
-                progress_msg(f"The model <{self.model_name}> loaded successfully.")
-        else:
+        if not isdir(self.model_path):
             # Download model.
             self.model = SentenceTransformer(f'sentence-transformers/{self.model_name}')
             # Save model locally.
             self.model.save(self.model_path, self.model_name, create_model_card=True)
             if show_progress:
                 progress_msg(f"The model <{self.model_name}> downloaded and saved.")
+        # The Model is (now) available locally.
+        self.model = SentenceTransformer(self.model_path)
+        if show_progress:
+            progress_msg(f"The model <{self.model_name}> loaded successfully.")
 
     def model_type(self):
         """
