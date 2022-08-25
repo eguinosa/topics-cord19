@@ -1540,7 +1540,7 @@ if __name__ == '__main__':
     # sample = RandomSample.load(show_progress=True)
 
     # Load RandomSample() saved with an id.
-    sample_id = '25000_docs'
+    sample_id = '5000_docs'
     print(f"\nLoading Saved Random Sample <{sample_id}>...")
     sample = RandomSample.load(sample_id=sample_id, show_progress=True)
     # ---------------------------------------------
@@ -1572,23 +1572,23 @@ if __name__ == '__main__':
     print(f"[{stopwatch.formatted_runtime()}]")
 
     # -- Load Topic Model --
-    # # the_model_id = 'testing_' + my_model.model_type()
-    # the_model_id = f'test_{my_model.model_type()}_{sample_id}'
+    # the_model_id = 'testing_' + my_model.model_type()
+    the_model_id = f'test_{my_model.model_type()}_{sample_id}'
     # ---------------------------------------------
-    # # Creating Topic Model.
-    # print(f"\nCreating Topic Model with ID <{the_model_id}>...")
-    # the_topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True,
-    #                              model_id=the_model_id, show_progress=True)
+    # Creating Topic Model.
+    print(f"\nCreating Topic Model with ID <{the_model_id}>...")
+    the_topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True,
+                                 model_id=the_model_id, show_progress=True)
     # ---------------------------------------------
     # print(f"Saving Topic Model with ID <{the_topic_model.model_id}>...")
     # # new_model_id = the_model_id
     # new_model_id = the_model_id + f"_{the_topic_model.num_topics}topics"
     # the_topic_model.save(model_id=new_model_id, show_progress=True)
     # ---------------------------------------------
-    # Loading Saved Topic Model.
-    the_model_id = 'test_bert_25000_docs_196topics_parallel'
-    print(f"\nLoading Topic Model <{the_model_id}>...")
-    the_topic_model = TopicModel.load(model_id=the_model_id, show_progress=True)
+    # # Loading Saved Topic Model.
+    # the_model_id = 'test_bert_25000_docs_196topics_parallel'
+    # print(f"\nLoading Topic Model <{the_model_id}>...")
+    # the_topic_model = TopicModel.load(model_id=the_model_id, show_progress=True)
     # ---------------------------------------------
     progress_msg("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
@@ -1612,9 +1612,9 @@ if __name__ == '__main__':
     # #         print(word_sim)
 
     # # --Test Creating Hierarchically Reduced Topics--
-    # Save the Hierarchically Reduced Topic Models.
-    print("\nSaving Topic Model's Topic Hierarchy...")
-    the_topic_model.save_reduced_topics(parallelism=True, show_progress=True)
+    # # Save the Hierarchically Reduced Topic Models.
+    # print("\nSaving Topic Model's Topic Hierarchy...")
+    # the_topic_model.save_reduced_topics(parallelism=True, show_progress=True)
 
     # # -- Show Hierarchically Reduced Topics --
     # new_topics = 10
