@@ -6,6 +6,7 @@ import hdbscan
 import multiprocessing
 import numpy as np
 from os import mkdir, listdir
+from shutil import rmtree
 from os.path import isdir, isfile, join
 from collections import defaultdict
 from numpy.linalg import norm
@@ -50,7 +51,7 @@ class TopicModel:
 
     def __init__(self, corpus: CorpusCord19 = None, doc_model: DocumentModel = None,
                  only_title_abstract=False, model_id=None, used_saved=False,
-                 show_progress=False):
+                 parallelism=False, show_progress=False):
         """
         Find the topics in the provided 'corpus' using 'doc_model' to get the
         embedding of the Documents and Words in the CORD-19 corpus selected.
@@ -70,6 +71,8 @@ class TopicModel:
             model_id: String with the ID that identifies the Topic Model.
             used_saved: A Bool to know if we need to load the Topic Model from
                 a file or recalculate it.
+            parallelism: Bool to indicate if we can use parallelism to create
+                the topics and create the topics' documents and vocabulary.
             show_progress: Bool representing whether we show the progress of
                 the function or not.
         """
@@ -199,7 +202,7 @@ class TopicModel:
                 progress_msg("Organizing documents by topics...")
             self.topic_docs = find_child_embeddings(parent_embeds=self.topic_embeds,
                                                     child_embeds=self.doc_embeds,
-                                                    parallelism=False,  # conflict with huggingface/tokenizers
+                                                    parallelism=parallelism,  # conflict with huggingface/tokenizers
                                                     show_progress=show_progress)
             # Create the embeddings of the Words to make the topics' vocabulary.
             if show_progress:
@@ -209,7 +212,7 @@ class TopicModel:
                 progress_msg("Creating topics vocabulary...")
             self.topic_words = find_child_embeddings(parent_embeds=self.topic_embeds,
                                                      child_embeds=self.word_embeds,
-                                                     parallelism=False,  # conflict with huggingface/tokenizers
+                                                     parallelism=parallelism,  # conflict with huggingface/tokenizers
                                                      show_progress=show_progress)
 
         # Create Default values for topics created with a fixed number of
@@ -541,7 +544,7 @@ class TopicModel:
         # Default dict to store the doc's embeddings.
         doc_embeddings = {}
         # Batch Size to process documents in groups. (Speeding Up)
-        batch_size = len(self.corpus_ids) // 100 + 1
+        batch_size = max(1, len(self.corpus_ids) // 100)
 
         # Progress Bar variables.
         count = 0
@@ -676,7 +679,8 @@ class TopicModel:
                 documents belonging to each one in the current corpus.
         """
         # Check if multiprocessing was requested, and we have enough topics.
-        parallel_min = int(2 * PEAK_SIZE / MAX_CORES)
+        # parallel_min = int(2 * PEAK_SIZE / MAX_CORES)  # I made a formula that game me this number (?)
+        parallel_min = 37  # This is the number when more cores are faster.
         if parallelism and len(topic_embeds_dict) > parallel_min:
             return self._document_count_parallel(topic_embeds_dict, show_progress)
 
@@ -742,6 +746,8 @@ class TopicModel:
         with multiprocessing.Pool(processes=core_count) as pool:
             # Pool map() vs imap() depending on if we have to report progress.
             if show_progress:
+                # Report Parallelization.
+                progress_msg(f"Using Parallelization <{core_count} cores>")
                 # Progress Variables.
                 count = 0
                 total = len(self.doc_embeds)
@@ -789,10 +795,15 @@ class TopicModel:
         class_folder_path = join(self.data_folder, self.class_data_folder)
         if not isdir(class_folder_path):
             mkdir(class_folder_path)
+        # Create Folder Model Folder Path.
         model_folder_name = self.model_folder_prefix + self.model_id
         model_folder_path = join(class_folder_path, model_folder_name)
-        if not isdir(model_folder_path):
-            mkdir(model_folder_path)
+        # Check if there is already a model saved with this name.
+        if isdir(model_folder_path):
+            # Delete the previously saved model with this name.
+            rmtree(model_folder_path)
+        # Create New Empty Folder for the model.
+        mkdir(model_folder_path)
 
         # Save Topic Model's Basic Info.
         self.save_basic_info()
@@ -916,10 +927,13 @@ class TopicModel:
         model_folder_path = join(class_folder_path, model_folder_name)
         if not isdir(model_folder_path):
             mkdir(model_folder_path)
-        # Create Folder to store the hierarchically reduced topics.
+        # Check if there is an already Saved Hierarchy.
         reduced_folder_path = join(model_folder_path, self.reduced_topics_folder)
-        if not isdir(reduced_folder_path):
-            mkdir(reduced_folder_path)
+        if isdir(reduced_folder_path):
+            # Remove the previously saved Hierarchy.
+            rmtree(reduced_folder_path)
+        # Create Empty Folder to store the hierarchically reduced topics.
+        mkdir(reduced_folder_path)
 
         # Get a Set with the Reduced Topic Sizes that we have to save.
         main_sizes = best_midway_sizes(self.num_topics)
@@ -968,6 +982,9 @@ class TopicModel:
                 # Progress.
                 if show_progress:
                     progress_msg("<<Saved>>")
+
+        # Update the Basic Info of the Model (It has now a Hierarchy).
+        self.save_basic_info()
 
     def reduced_topics_saved(self):
         """
@@ -1158,7 +1175,8 @@ def find_child_embeddings(parent_embeds: dict, child_embeds: dict,
         child_ids to them in the embedding space as values.
     """
     # See if we have to use the multiprocessing version.
-    parallel_min = int(2 * PEAK_SIZE / MAX_CORES)
+    # parallel_min = int(2 * PEAK_SIZE / MAX_CORES)  # I made a formula that game me this number (?)
+    parallel_min = 37  # This is the number when more cores are faster.
     if parallelism and len(parent_embeds) > parallel_min:
         return find_children_parallel(parent_embeds, child_embeds, show_progress)
 
@@ -1231,15 +1249,10 @@ def find_children_parallel(parent_embeds: dict, child_embeds: dict,
     parent_child_dict = defaultdict(list)
     # Create the Processes Pool using all the available CPUs.
     with multiprocessing.Pool(processes=core_count) as pool:
-        # No need to report progress, use Pool.map()
-        if not show_progress:
-            # Find the closest parent to each child.
-            tuple_results = pool.map(_custom_closest_vector, tuple_params, chunksize=chunk_size)
-            # Save the closest children to each Parent.
-            for child_id, parent_id, similarity in tuple_results:
-                parent_child_dict[parent_id].append((child_id, similarity))
         # Using Pool.imap(), we have to show the progress.
-        else:
+        if show_progress:
+            # Report Parallelization.
+            progress_msg(f"Using Parallelization <{core_count} cores>")
             # Progress Variables.
             count = 0
             total = len(child_embeds)
@@ -1253,6 +1266,13 @@ def find_children_parallel(parent_embeds: dict, child_embeds: dict,
                 if show_progress:
                     count += 1
                     progress_bar(count, total)
+        # No need to report progress, use Pool.map()
+        else:
+            # Find the closest parent to each child.
+            tuple_results = pool.map(_custom_closest_vector, tuple_params, chunksize=chunk_size)
+            # Save the closest children to each Parent.
+            for child_id, parent_id, similarity in tuple_results:
+                parent_child_dict[parent_id].append((child_id, similarity))
 
     # Sort Children's List by their similarity to their parents.
     parent_child_dict = dict(parent_child_dict)
@@ -1521,7 +1541,7 @@ if __name__ == '__main__':
 
     # Load RandomSample() saved with an id.
     sample_id = '25000_docs'
-    print(f"Loading Saved Random Sample <{sample_id}>...")
+    print(f"\nLoading Saved Random Sample <{sample_id}>...")
     sample = RandomSample.load(sample_id=sample_id, show_progress=True)
     # ---------------------------------------------
     # # Use CORD-19 Dataset
@@ -1560,12 +1580,14 @@ if __name__ == '__main__':
     # the_topic_model = TopicModel(corpus=sample, doc_model=my_model, only_title_abstract=True,
     #                              model_id=the_model_id, show_progress=True)
     # ---------------------------------------------
-    # print(f"Saving Topic Model with ID <{the_topic_model.model_id}>")
+    # print(f"Saving Topic Model with ID <{the_topic_model.model_id}>...")
+    # # new_model_id = the_model_id
     # new_model_id = the_model_id + f"_{the_topic_model.num_topics}topics"
     # the_topic_model.save(model_id=new_model_id, show_progress=True)
     # ---------------------------------------------
-    # # Loading Saved Topic Model.
+    # Loading Saved Topic Model.
     the_model_id = 'test_bert_25000_docs_196topics_parallel'
+    print(f"\nLoading Topic Model <{the_model_id}>...")
     the_topic_model = TopicModel.load(model_id=the_model_id, show_progress=True)
     # ---------------------------------------------
     progress_msg("Done.")
@@ -1579,7 +1601,8 @@ if __name__ == '__main__':
     all_topics = the_topic_model.top_topics()
     for topic_and_size in all_topics:
         print(topic_and_size)
-
+    # ---------------------------------------------
+    # # Topics' Vocabulary
     # # top_n = 15
     # # print(f"\nTop {top_n} words per topic:")
     # # words_per_topic = the_topic_model.all_topics_top_words(top_n)
@@ -1588,14 +1611,13 @@ if __name__ == '__main__':
     # #     for word_sim in word_list:
     # #         print(word_sim)
 
-    # --Test Creating Hierarchically Reduced Topics--
+    # # --Test Creating Hierarchically Reduced Topics--
     # Save the Hierarchically Reduced Topic Models.
     print("\nSaving Topic Model's Topic Hierarchy...")
     the_topic_model.save_reduced_topics(parallelism=True, show_progress=True)
-    # Update Basic Info of the Model.
-    the_topic_model.save_basic_info()
 
-    # new_topics = 7
+    # # -- Show Hierarchically Reduced Topics --
+    # new_topics = 10
     # print(f"\nCreating Topic Model with {new_topics} topics.")
     # the_topic_model.generate_new_topics(number_topics=new_topics, show_progress=True)
     # print("Done.")
