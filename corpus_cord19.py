@@ -9,6 +9,15 @@ class CorpusCord19(ABC):
     to implement.
     """
 
+    def __len__(self):
+        """
+        Get the number of papers in the corpus.
+
+        Returns: Int with the length of the corpus.
+        """
+        result = len(self.papers.papers_cord_uids())
+        return result
+
     @abstractmethod
     def papers_cord_uids(self):
         """
