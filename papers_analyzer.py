@@ -5,7 +5,7 @@ from os import mkdir
 from os.path import isdir, join, isfile
 from random import sample
 
-from papers import Papers
+from papers_cord19 import PapersCord19
 from extra_funcs import progress_bar, progress_msg, big_number
 from time_keeper import TimeKeeper
 
@@ -45,7 +45,7 @@ class PapersAnalyzer:
             mkdir(analyzer_folder_path)
 
         # Get the CORD-19 papers.
-        self.cord19_papers = Papers(show_progress=show_progress)
+        self.cord19_papers = PapersCord19(show_progress=show_progress)
 
         # Create the paths for the indexes of the new paper groups.
         small_papers_path = join(analyzer_folder_path, self.small_papers_index)
@@ -299,7 +299,7 @@ def biggest_papers():
     Get how many papers are bigger than 1,000,000 characters.
     """
     # Get the papers and the amount available in the current database.
-    the_papers = Papers()
+    the_papers = PapersCord19()
     total = len(the_papers.papers_index)
     print(f"\nAmount of papers in CORD-19: {big_number(total)}.")
 
