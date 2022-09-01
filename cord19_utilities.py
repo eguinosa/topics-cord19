@@ -6,7 +6,7 @@ from os.path import isdir, isfile, join
 
 from corpus_cord19 import CorpusCord19
 from document_model import DocumentModel
-from papers import Papers
+from papers_cord19 import PapersCord19
 from specter_cord19 import SpecterCord19
 from doc_tokenizers import doc_tokenizer
 from random_sample import RandomSample
@@ -61,7 +61,7 @@ def save_titles_abstracts(folder_name: str = None, corpus: CorpusCord19 = None,
 
     # Check the Corpus was provided.
     if not corpus:
-        corpus = Papers()
+        corpus = PapersCord19()
     # Get Papers cord_uids.
     papers_ids = corpus.papers_cord_uids()
 
@@ -112,7 +112,7 @@ def save_corpus_vocabulary(corpus: CorpusCord19 = None, file_name: str = None,
     """
     # Load all papers in case no corpus was provided.
     if not corpus:
-        corpus = Papers(show_progress=show_progress)
+        corpus = PapersCord19(show_progress=show_progress)
 
     # Create path for the file where we will store the vocabulary.
     if not isdir(data_folder):
