@@ -5,7 +5,7 @@ from os.path import isdir, isfile, join
 from gensim.models import doc2vec
 
 from corpus_cord19 import CorpusCord19
-from papers import Papers
+from papers_cord19 import PapersCord19
 from random_sample import RandomSample
 from document_model import DocumentModel
 from iterable_tokenizer import IterableTokenizer
@@ -84,7 +84,7 @@ class Doc2VecCord19(DocumentModel):
             else:
                 if show_progress:
                     progress_msg("Creating default CORD-19 corpus...")
-                self.corpus = Papers(show_progress=show_progress)
+                self.corpus = PapersCord19(show_progress=show_progress)
 
             # Create an Iterable with the documents tagged.
             if use_title_abstract:
