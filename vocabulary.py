@@ -13,7 +13,7 @@ from doc_tokenizers import doc_tokenizer
 from extra_funcs import progress_bar
 
 
-class CorpusVocab:
+class Vocabulary:
     """
     Manage the vocabulary of the corpus creating an id for each word, saving
     the word embeddings and the documents' vocabulary, so we can see to which
@@ -21,7 +21,7 @@ class CorpusVocab:
     frequencies of the words in the documents and the corpus.
     """
     # Class variables filenames.
-    corpus_vocab_index = 'corpus_vocab_index.json'
+    vocabulary_index = 'vocabulary_index.json'
     word2embed_file = 'word2embed.json'
     word2count_file = 'word2count.json'
     doc2content_file = 'word2content.json'
@@ -56,7 +56,7 @@ class CorpusVocab:
                 raise Exception("There is not Vocabulary Folder at the provided Path!!")
 
             # Load class Index.
-            index_path = join(_vocab_dir_path, self.corpus_vocab_index)
+            index_path = join(_vocab_dir_path, self.vocabulary_index)
             if not isfile(index_path):
                 raise Exception("The CorpusVocab Index file does not exist!!")
             with open(index_path, 'r') as f:
@@ -188,7 +188,7 @@ class CorpusVocab:
             'corpus_length': self.corpus_length,
             'vocab_size': len(self.word2count)
         }
-        index_path = join(dir_path, self.corpus_vocab_index)
+        index_path = join(dir_path, self.vocabulary_index)
         with open(index_path, 'w') as f:
             json.dump(vocab_index, f)
         if show_progress:
