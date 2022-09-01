@@ -486,7 +486,7 @@ if __name__ == '__main__':
     print(f"[{stopwatch.formatted_runtime()}]")
 
     # Get the amount of documents the dataset has.
-    num_papers = len(cord19_papers.papers_index)
+    num_papers = len(cord19_papers)
     print(f"\nThe current CORD-19 dataset has {big_number(num_papers)} documents.")
 
     # Get the 'cord_uid' of one of the papers.
