@@ -12,7 +12,7 @@ from extra_funcs import progress_bar, progress_msg, number_to_3digits, big_numbe
 from time_keeper import TimeKeeper
 
 
-class Papers(CorpusCord19):
+class PapersCord19(CorpusCord19):
     """
     Scans the CORD-19 dataset to create an index of it, saving all the relevant
     information for later use.
@@ -481,7 +481,7 @@ if __name__ == '__main__':
     # <<< Testing the Papers class >>>
     # Load the CORD-19 Dataset
     print("\nLoading the CORD-19 Dataset...")
-    cord19_papers = Papers(show_progress=True)
+    cord19_papers = PapersCord19(show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
