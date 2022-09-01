@@ -15,7 +15,7 @@ class CorpusCord19(ABC):
 
         Returns: Int with the length of the corpus.
         """
-        result = len(self.papers.papers_cord_uids())
+        result = len(self.papers_cord_uids())
         return result
 
     @abstractmethod
