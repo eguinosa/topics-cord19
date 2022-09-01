@@ -2,7 +2,7 @@
 
 import logging
 
-from papers import Papers
+from papers_cord19 import PapersCord19
 from time_keeper import TimeKeeper
 from extra_funcs import big_number
 # from doc2vec_cord19 import Doc2VecCord19
@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     # Load Corpus.
     print(f"\nLoading CORD-19 corpus...")
-    corpus_cord19 = Papers(show_progress=True)
+    corpus_cord19 = PapersCord19(show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
