@@ -13,7 +13,7 @@ from collections import defaultdict
 from numpy.linalg import norm
 
 from corpus_cord19 import CorpusCord19
-from papers import Papers
+from papers_cord19 import PapersCord19
 from document_model import DocumentModel
 from random_sample import RandomSample
 from bert_cord19 import BertCord19
@@ -174,7 +174,7 @@ class TopicModel:
             # -- Create Topic Model --
             # Make sure we have a CORD-19 Corpus.
             if not corpus:
-                corpus = Papers()
+                corpus = PapersCord19()
             self.corpus_ids = corpus.papers_cord_uids()
 
             # Check we have a Document Model.
@@ -1372,7 +1372,7 @@ def save_cord19_topics():
 
     # Load Corpus.
     print("\nLoading the CORD-19 corpus...")
-    topic_corpus = Papers(show_progress=True)
+    topic_corpus = PapersCord19(show_progress=True)
     print("Done.")
     print(f"[{time_record.formatted_runtime()}]")
     # Report Corpus size.
