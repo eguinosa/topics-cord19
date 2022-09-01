@@ -8,7 +8,7 @@ from collections import deque
 # from random import sample
 
 from document_model import DocumentModel
-from papers import Papers
+from papers_cord19 import PapersCord19
 from cord19_utilities import load_vocab_embeddings, embeds_title_abstract
 from extra_funcs import progress_bar, progress_msg, number_to_3digits
 from time_keeper import TimeKeeper
@@ -108,7 +108,7 @@ class SpecterManager(DocumentModel):
             # Load & Save Papers' Embeddings.
             if show_progress:
                 progress_msg("Creating instance of Papers() class...")
-            corpus = Papers(show_progress=show_progress)
+            corpus = PapersCord19(show_progress=show_progress)
             papers_ids = list(corpus.papers_cord_uids())
             # Create dictionary with all the Paper's embeddings.
             if show_progress:
