@@ -4,7 +4,7 @@ venv-topics-cord19/
 # CORD-19 Dataset
 cord19_data/
 # Corpus Data
-corpus_data/
+corpora_data/
 # Document Models
 doc_models/
 # Project Data
