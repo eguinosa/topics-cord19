@@ -19,7 +19,7 @@ class PapersCord19(CorpusCord19):
     """
     # CORD-19 Data Location
     cord19_data_folder = 'cord19_data'
-    current_dataset = '2020-05-31'
+    default_dataset = '2020-05-31'
     metadata_file = 'metadata.csv'
     embeddings_file = 'cord_19_embeddings_2020-05-31.csv'
 
@@ -30,7 +30,7 @@ class PapersCord19(CorpusCord19):
     papers_index_file = 'papers_index.json'
     embeds_index_file = 'papers_embeddings_index.json'
 
-    def __init__(self, show_progress=False):
+    def __init__(self, dataset_id='', show_progress=False):
         """
         Load the metadata.csv to create the index of all the papers available in
         the current CORD-19 dataset and save all the information of interest.
@@ -40,9 +40,16 @@ class PapersCord19(CorpusCord19):
         too much memory.
 
         Args:
+            dataset_id: String with the ID of the dataset we want to load.
             show_progress: Bool representing whether we show the progress of
                 the function or not.
         """
+        # Check if a Dataset ID was provided.
+        if dataset_id:
+            self.current_dataset = dataset_id
+        else:
+            self.current_dataset = self.default_dataset
+
         # Create the data folders if they don't exist.
         if not isdir(self.project_data_folder):
             mkdir(self.project_data_folder)
