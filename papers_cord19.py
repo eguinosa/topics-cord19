@@ -356,7 +356,9 @@ class PapersCord19(CorpusCord19):
         # Sort the body texts found by size.
         body_texts.sort(key=lambda x: len(x), reverse=True)
         # The longest body text found for the paper.
-        return body_texts[0]
+        final_text = body_texts[0]
+        final_text = final_text.strip()
+        return final_text
 
     def paper_embedding(self, cord_uid):
         """
