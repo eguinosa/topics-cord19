@@ -6,6 +6,7 @@ from os import mkdir
 from os.path import join, isfile, isdir
 from collections import defaultdict
 from random import choice
+from pprint import pprint
 
 from corpus_cord19 import CorpusCord19
 from extra_funcs import progress_bar, progress_msg, number_to_3digits, big_number
@@ -288,7 +289,7 @@ class PapersCord19(CorpusCord19):
         all_cord_uids = list(self.papers_index)
         return all_cord_uids
 
-    def paper_title(self, cord_uid):
+    def paper_title(self, cord_uid: str):
         """
         Find the title of the CORD-19 paper specified by the 'cord_uid'
         identifier, and return them together as a string.
@@ -306,7 +307,7 @@ class PapersCord19(CorpusCord19):
         title_text = title_text.strip()
         return title_text
 
-    def paper_abstract(self, cord_uid):
+    def paper_abstract(self, cord_uid: str):
         """
         Find the title and abstract of the CORD-19 paper specified by the
         'cord_uid' identifier, and return them together as a string.
@@ -324,7 +325,7 @@ class PapersCord19(CorpusCord19):
         abstract_text = abstract_text.strip()
         return abstract_text
 
-    def paper_body_text(self, cord_uid):
+    def paper_body_text(self, cord_uid: str):
         """
         Find the text of the 'cord_uid' paper on either the 'pmc_json_files' or
         the 'pdf_json_files'.
@@ -360,7 +361,7 @@ class PapersCord19(CorpusCord19):
         final_text = final_text.strip()
         return final_text
 
-    def paper_embedding(self, cord_uid):
+    def paper_embedding(self, cord_uid: str):
         """
         Find the precomputed SPECTER Document Embedding for the specified Paper
         'cord_uid'.
@@ -390,6 +391,63 @@ class PapersCord19(CorpusCord19):
                 self.cached_dict_filename = embed_dict_filename
         # Return the embedding using the cached dictionary.
         return self.cached_embed_dict[cord_uid]
+
+    def paper_authors(self, cord_uid: str):
+        """
+        Create a List with the names of the authors of the 'cord_uid' paper.
+
+        Args:
+            cord_uid: String with the ID of the paper.
+
+        Returns:
+            List[Dict] with the authors of the Paper. The Author's Dict will be
+                in the form {'first_name': ..., 'last_name': ...}.
+        """
+        # Get the authors for the papers.
+        paper_info = self.papers_index[cord_uid]
+        authors_list = paper_info['authors']
+
+        # Create list for the formatted authors.
+        formatted_authors = []
+        for author_str in authors_list:
+            author_names = author_str.split(',')
+            last_name = author_names[0].strip()
+            first_name = author_names[1].strip()
+            author_dict = {
+                'first_name': first_name,
+                'last_name': last_name
+            }
+            # Add new author to the list.
+            formatted_authors.append(author_dict)
+
+        # List of Dictionaries with the authors.
+        return formatted_authors
+
+    def paper_publish_date(self, cord_uid: str):
+        """
+        Extract the Publication Date of the Paper 'cord_uid'.
+
+        Args:
+            cord_uid: String with the ID of the paper.
+
+        Returns:
+            Dictionary with the 'year', 'month' and 'day' of the publication
+            date of the paper.
+        """
+        # Get the String with the Date of Publication.
+        paper_info = self.papers_index[cord_uid]
+        date_string = paper_info['publish_time']
+        date_split = date_string.split('-')
+
+        # Create Dictionary with the Date Info.
+        date_dict = {'year': int(date_split[0])}
+        if len(date_split) > 1:
+            date_dict['month'] = int(date_split[1])
+        if len(date_split) > 2:
+            date_dict['day'] = int(date_split[2])
+
+        # Dictionary with the publication date.
+        return date_dict
 
     def selected_papers_title_abstract(self, cord_uids):
         """
@@ -526,6 +584,17 @@ if __name__ == '__main__':
     print(f"  Title: {the_title}")
     print(f"  Publish Time: {the_time}")
     print(f"  Authors: {the_authors}")
+
+    # Test Paper's Author & Publish Date.
+    print("\nFormatted Author Info: ")
+    pprint(the_papers.paper_authors(rand_cord_uid))
+    print("\nFormatted Publication Date:")
+    pprint(the_papers.paper_publish_date(rand_cord_uid))
+
+    # # Quit Loop (If Using a Loop to Test)..
+    # user_input = input("\nType [q/quit] to Exit Loop.\n")
+    # if user_input.lower().strip() in {'q', 'quit', 'exit'}:
+    #     break
 
     print("\nDone.")
     print(f"[{stopwatch.formatted_runtime()}]")
