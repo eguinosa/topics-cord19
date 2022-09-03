@@ -490,32 +490,42 @@ if __name__ == '__main__':
     # <<< Testing the Papers class >>>
     # Load the CORD-19 Dataset
     print("\nLoading the CORD-19 Dataset...")
-    cord19_papers = PapersCord19(show_progress=True)
+    the_papers = PapersCord19(show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
     # Get the amount of documents the dataset has.
-    num_papers = len(cord19_papers)
+    num_papers = len(the_papers)
     print(f"\nThe current CORD-19 dataset has {big_number(num_papers)} documents.")
 
     # Get the 'cord_uid' of one of the papers.
-    cord19_ids = cord19_papers.papers_cord_uids()
+    cord19_ids = the_papers.papers_cord_uids()
     rand_cord_uid = choice(cord19_ids)
 
     # Getting the embedding of one of the papers.
     print(f"\nGetting the Embedding for the Paper <{rand_cord_uid}>...")
-    result = cord19_papers.paper_embedding(rand_cord_uid)
+    result = the_papers.paper_embedding(rand_cord_uid)
     print(f"The Embedding is:")
     print(result)
 
     # Getting the text of one of the papers.
     print(f"\nGetting the content of the Paper <{rand_cord_uid}>...")
-    result = cord19_papers.formatted_paper_content(rand_cord_uid)
+    result = the_papers.formatted_paper_content(rand_cord_uid)
     # Trim the size of the paper's content.
     if len(result) > 1_500:
         result = result[:1_500] + '...'
     print("The Content of the paper.")
     print(result)
+
+    # Display the Information of the Paper.
+    print(f"\nInformation of the Paper <{rand_cord_uid}>:")
+    the_paper_info = the_papers.papers_index[rand_cord_uid]
+    the_title = the_paper_info['title']
+    the_time = the_paper_info['publish_time']
+    the_authors = the_paper_info['authors']
+    print(f"  Title: {the_title}")
+    print(f"  Publish Time: {the_time}")
+    print(f"  Authors: {the_authors}")
 
     print("\nDone.")
     print(f"[{stopwatch.formatted_runtime()}]")
