@@ -6,7 +6,6 @@ from os import mkdir, listdir
 from shutil import rmtree
 from os.path import join, isdir, isfile
 
-from corpus_cord19 import CorpusCord19
 from papers_cord19 import PapersCord19
 from time_keeper import TimeKeeper
 from extra_funcs import progress_bar, progress_msg, big_number
@@ -29,7 +28,7 @@ class CorporaManager:
     default_sample_id = 'default'
     sample_prefix = 'random_sample_'
 
-    def __init__(self, corpus_id='', corpus: CorpusCord19 = None, sample_id='',
+    def __init__(self, corpus_id='', corpus: PapersCord19 = None, sample_id='',
                  new_sample_size=-1, show_progress=False):
         """
         Create a random subset of the documents inside the provided 'corpus' and
@@ -194,7 +193,7 @@ class CorporaManager:
         """
         self.doc_embeds = None
 
-    def save_corpus_data(self, folder_path: str, corpus: CorpusCord19,
+    def save_corpus_data(self, folder_path: str, corpus: PapersCord19,
                          show_progress=False):
         """
         Save the title & abstracts, full content & embeddings of the papers in
@@ -277,6 +276,10 @@ class CorporaManager:
             with open(individual_embeds_file_path, 'w') as f:
                 json.dump(doc_embed, f)
 
+            # Get Authors and Publication date.
+            doc_authors = corpus.paper_authors(doc_id)
+            doc_time = corpus.paper_publish_date(doc_id)
+
             # Get Length of the Doc.
             doc_length = len(doc_title_abstract + doc_body_text)
             # Create Document Index.
@@ -284,6 +287,8 @@ class CorporaManager:
                 'cord_uid': doc_id,
                 'title': doc_title,
                 'abstract': doc_abstract,
+                'authors': doc_authors,
+                'publish_date': doc_time,
                 'char_length': doc_length,
                 'specter_embed_path': individual_embeds_file_path,
                 'title_abstract_path': title_abstract_file_path,
