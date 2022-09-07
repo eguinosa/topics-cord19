@@ -177,6 +177,32 @@ class RandomSample(CorpusCord19):
         """
         return self.cord19_papers.paper_embedding(cord_uid)
 
+    def paper_authors(self, cord_uid: str):
+        """
+        Create a List with the names of the authors of the 'cord_uid' paper.
+
+        Args:
+            cord_uid: String with the ID of the paper.
+
+        Returns:
+            List[Dict] with the authors of the Paper. The Author's Dict will be
+                in the form {'first_name': ..., 'last_name': ...}.
+        """
+        return self.cord19_papers.paper_authors(cord_uid)
+
+    def paper_publish_date(self, cord_uid: str):
+        """
+        Extract the Publication Date of the Paper 'cord_uid'.
+
+        Args:
+            cord_uid: String with the ID of the paper.
+
+        Returns:
+            Dictionary with the 'year', 'month' and 'day' of the publication
+            date of the paper.
+        """
+        return self.cord19_papers.paper_publish_date(cord_uid)
+
     def save_sample(self, sample_id):
         """
         Saves the current Random Sample in a separated index file, to avoid
