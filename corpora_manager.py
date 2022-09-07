@@ -6,9 +6,14 @@ from os import mkdir, listdir
 from shutil import rmtree
 from os.path import join, isdir, isfile
 
+from corpus_cord19 import CorpusCord19
 from papers_cord19 import PapersCord19
-from time_keeper import TimeKeeper
 from extra_funcs import progress_bar, progress_msg, big_number
+
+# Testing Imports.
+from pprint import pprint
+from random_sample import RandomSample
+from time_keeper import TimeKeeper
 
 
 class CorporaManager:
@@ -22,13 +27,13 @@ class CorporaManager:
     corpus_folder_prefix = 'corpus_cord19_'
     title_abstracts_folder = 'title_abstracts'
     body_texts_folder = 'body_texts'
-    individual_embeds_folder = 'individual_specter_embeddings'
+    single_embeds_folder = 'single_specter_embeddings'
     specter_embeds_file = 'specter_embeddings.json'
     corpus_index_file = 'corpus_index.json'
     default_sample_id = 'default'
     sample_prefix = 'random_sample_'
 
-    def __init__(self, corpus_id='', corpus: PapersCord19 = None, sample_id='',
+    def __init__(self, corpus_id='', corpus: CorpusCord19 = None, sample_id='',
                  new_sample_size=-1, show_progress=False):
         """
         Create a random subset of the documents inside the provided 'corpus' and
@@ -64,7 +69,7 @@ class CorporaManager:
         # Check if the corpus is saved.
         if self.corpus_saved(corpus_id=corpus_id):
             if show_progress:
-                progress_msg(f"Corpus <{corpus_id}> available.")
+                progress_msg(f"Corpus <{corpus_id}> available...")
             # Load Corpus Index.
             with open(corpus_index_path, 'r') as f:
                 corpus_index = json.load(f)
@@ -221,15 +226,15 @@ class CorporaManager:
         mkdir(title_abstract_folder_path)
         body_text_folder_path = join(folder_path, self.body_texts_folder)
         mkdir(body_text_folder_path)
-        individual_embeds_folder_path = join(folder_path, self.individual_embeds_folder)
-        mkdir(individual_embeds_folder_path)
+        single_embeds_folder_path = join(folder_path, self.single_embeds_folder)
+        mkdir(single_embeds_folder_path)
 
         # Progress Variables.
         count = 0
         total = len(corpus) + 2  # saving index & embeddings dict.
         without_title = 0
         without_abstract = 0
-        without_text = 0
+        with_text = 0
         # Create Dictionary Index of the documents.
         docs_index = {}
         doc_embeddings = {}
@@ -251,7 +256,8 @@ class CorporaManager:
                 continue
             # Save Title & Abstract.
             doc_title_abstract = doc_title + '\n\n' + doc_abstract
-            title_abstract_file_path = join(title_abstract_folder_path, doc_id)
+            title_abstract_filename = doc_id + '.txt'
+            title_abstract_file_path = join(title_abstract_folder_path, title_abstract_filename)
             with open(title_abstract_file_path, 'w') as f:
                 print(doc_title_abstract, file=f)
 
@@ -259,12 +265,13 @@ class CorporaManager:
             doc_body_text = corpus.paper_body_text(doc_id)
             # Check the Doc has Body Text.
             if doc_body_text:
-                body_text_file_path = join(body_text_folder_path, doc_id)
+                with_text += 1
+                body_text_filename = doc_id + '.txt'
+                body_text_file_path = join(body_text_folder_path, body_text_filename)
                 with open(body_text_file_path, 'w') as f:
-                    print(doc_body_text, f)
+                    print(doc_body_text, file=f)
             else:
                 # Without Body Text.
-                without_text += 1
                 body_text_file_path = ''
 
             # Get & Save Embedding.
@@ -272,8 +279,9 @@ class CorporaManager:
             # Save embed in Dictionary.
             doc_embeddings[doc_id] = doc_embed
             # Save Embed in Individual File.
-            individual_embeds_file_path = join(individual_embeds_folder_path, doc_id)
-            with open(individual_embeds_file_path, 'w') as f:
+            single_embeds_filename = doc_id + '.json'
+            single_embeds_file_path = join(single_embeds_folder_path, single_embeds_filename)
+            with open(single_embeds_file_path, 'w') as f:
                 json.dump(doc_embed, f)
 
             # Get Authors and Publication date.
@@ -290,7 +298,7 @@ class CorporaManager:
                 'authors': doc_authors,
                 'publish_date': doc_time,
                 'char_length': doc_length,
-                'specter_embed_path': individual_embeds_file_path,
+                'specter_embed_path': single_embeds_file_path,
                 'title_abstract_path': title_abstract_file_path,
                 'body_text_path': body_text_file_path,
             }
@@ -324,7 +332,7 @@ class CorporaManager:
             progress_msg(f"{docs_saved} documents out of {total_docs} saved.")
             progress_msg(f"{big_number(without_title)} docs without title.")
             progress_msg(f"{big_number(without_abstract)} docs without abstract.")
-            progress_msg(f"{big_number(without_text)} docs without body text.")
+            progress_msg(f"{big_number(with_text)} docs with body text.")
             progress_msg("<------------------>")
 
         # Index with Documents' Info.
@@ -378,8 +386,14 @@ class CorporaManager:
         # Create Default List.
         corpora_ids = []
         for filename in listdir(cls.corpora_data_folder):
-            if cls.corpus_saved(corpus_id=filename):
-                corpora_ids.append(filename)
+            # Check if this a viable corpus folder.
+            prefix_len = len(cls.corpus_folder_prefix)
+            if len(filename) <= prefix_len:
+                continue
+            # Remove the Corpus Folder Prefix from their name.
+            corpus_id = filename[prefix_len:]
+            if cls.corpus_saved(corpus_id=corpus_id):
+                corpora_ids.append(corpus_id)
 
         # List of Saved Corpora.
         return corpora_ids
@@ -461,6 +475,45 @@ class CorporaManager:
 if __name__ == '__main__':
     # Record Runtime of the Program.
     stopwatch = TimeKeeper()
+
+    # Load Random Sample with ID.
+    the_id = '500_docs'
+    print(f"\nLoading Saved Random Sample <{the_id}>...")
+    the_sample = RandomSample.load(sample_id=the_id, show_progress=True)
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
+
+    # Create a Corpora Manager with this Random Sample and the same ID.
+    the_size = len(the_sample)
+    print(f"\nCreating Corpora Manager with {the_size} documents...")
+    the_manager = CorporaManager(corpus_id=the_id, corpus=the_sample, show_progress=True)
+    print("Done.")
+    print(f"[{stopwatch.formatted_runtime()}]")
+
+    # Print Info of the First Document.
+    the_doc_id = the_manager.doc_ids[0]
+    the_doc_info = the_manager.corpus_index[the_doc_id]
+    print(f"\nInformation of the Document <{the_doc_id}>:")
+    pprint(the_doc_info)
+
+    # Check the available Samples.
+    the_corpus_id = the_manager.corpus_id
+    the_sample_list = CorporaManager.available_samples(corpus_id=the_corpus_id)
+    if the_sample_list:
+        print("\nIDs of Available Samples:")
+    else:
+        print("\nThe Corpora Manager has not samples to be loaded.")
+    for the_sample_id in the_sample_list:
+        print(f"  -> {the_sample_id}")
+
+    # Check the available Corpora.
+    the_corpora_list = CorporaManager.available_corpora()
+    if the_corpora_list:
+        print("\nIDs of Available Corpora:")
+    else:
+        print("\nThere is no Corpora Saved and Ready to be Loaded.")
+    for the_corpus_id in the_corpora_list:
+        print(f"  -> {the_corpus_id}")
 
     print("\nDone.")
     print(f"[{stopwatch.formatted_runtime()}]\n")
