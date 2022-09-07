@@ -5,12 +5,15 @@ import json
 from os import mkdir
 from os.path import join, isfile, isdir
 from collections import defaultdict
-from random import choice
-from pprint import pprint
 
 from corpus_cord19 import CorpusCord19
-from extra_funcs import progress_bar, progress_msg, number_to_3digits, big_number
+from extra_funcs import progress_bar, progress_msg, number_to_3digits
+
+# Testing Imports.
+# from random import choice
+# from pprint import pprint
 from time_keeper import TimeKeeper
+from extra_funcs import big_number
 
 
 class PapersCord19(CorpusCord19):
@@ -410,13 +413,19 @@ class PapersCord19(CorpusCord19):
         # Create list for the formatted authors.
         formatted_authors = []
         for author_str in authors_list:
+            if not author_str:
+                # No author was provided.
+                continue
             author_names = author_str.split(',')
-            last_name = author_names[0].strip()
-            first_name = author_names[1].strip()
-            author_dict = {
-                'first_name': first_name,
-                'last_name': last_name
-            }
+            if len(author_names) == 2:
+                last_name = author_names[0].strip()
+                first_name = author_names[1].strip()
+                author_dict = {
+                    'first_name': first_name,
+                    'last_name': last_name
+                }
+            else:
+                raise Exception(f"Not Supported Version of Names for <{cord_uid}>")
             # Add new author to the list.
             formatted_authors.append(author_dict)
 
@@ -558,13 +567,13 @@ if __name__ == '__main__':
 
     # Get the 'cord_uid' of one of the papers.
     cord19_ids = the_papers.papers_cord_uids()
-    rand_cord_uid = choice(cord19_ids)
+    rand_cord_uid = 'ad6f5742'  # choice(cord19_ids)
 
-    # Getting the embedding of one of the papers.
-    print(f"\nGetting the Embedding for the Paper <{rand_cord_uid}>...")
-    result = the_papers.paper_embedding(rand_cord_uid)
-    print(f"The Embedding is:")
-    print(result)
+    # # Getting the embedding of one of the papers.
+    # print(f"\nGetting the Embedding for the Paper <{rand_cord_uid}>...")
+    # result = the_papers.paper_embedding(rand_cord_uid)
+    # print(f"The Embedding is:")
+    # print(result)
 
     # Getting the text of one of the papers.
     print(f"\nGetting the content of the Paper <{rand_cord_uid}>...")
@@ -585,11 +594,11 @@ if __name__ == '__main__':
     print(f"  Publish Time: {the_time}")
     print(f"  Authors: {the_authors}")
 
-    # Test Paper's Author & Publish Date.
-    print("\nFormatted Author Info: ")
-    pprint(the_papers.paper_authors(rand_cord_uid))
-    print("\nFormatted Publication Date:")
-    pprint(the_papers.paper_publish_date(rand_cord_uid))
+    # # Test Formatted Paper's Author & Publish Date.
+    # print("\nFormatted Author Info: ")
+    # pprint(the_papers.paper_authors(rand_cord_uid))
+    # print("\nFormatted Publication Date:")
+    # pprint(the_papers.paper_publish_date(rand_cord_uid))
 
     # # Quit Loop (If Using a Loop to Test)..
     # user_input = input("\nType [q/quit] to Exit Loop.\n")
