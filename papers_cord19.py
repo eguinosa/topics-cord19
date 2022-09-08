@@ -10,8 +10,8 @@ from corpus_cord19 import CorpusCord19
 from extra_funcs import progress_bar, progress_msg, number_to_3digits
 
 # Testing Imports.
-# from random import choice
-# from pprint import pprint
+from random import choice
+from pprint import pprint
 from time_keeper import TimeKeeper
 from extra_funcs import big_number
 
@@ -411,19 +411,28 @@ class PapersCord19(CorpusCord19):
         # Create list for the formatted authors.
         formatted_authors = []
         for author_str in authors_list:
+            # Skip when no author data provided.
             if not author_str:
-                # No author was provided.
                 continue
+            # 1 or more than 3 author data fields provided, only save the first.
             author_names = author_str.split(',')
-            if len(author_names) == 2:
-                last_name = author_names[0].strip()
-                first_name = author_names[1].strip()
+            if len(author_names) == 1 or len(author_names) > 3:
                 author_dict = {
-                    'first_name': first_name,
-                    'last_name': last_name
+                    'one_name': author_names[0].strip()
+                }
+            elif len(author_names) == 2:
+                author_dict = {
+                    'last_name': author_names[0].strip(),
+                    'first_name': author_names[1].strip(),
+                }
+            elif len(author_names) == 3:
+                author_dict = {
+                    'last_name': author_names[0].strip(),
+                    'middle_name': author_names[1].strip(),
+                    'first_name': author_names[2].strip(),
                 }
             else:
-                raise Exception(f"Not Supported Version of Names for <{cord_uid}>")
+                raise Exception(f"Not Supported Version of Names for <{cord_uid}>.")
             # Add new author to the list.
             formatted_authors.append(author_dict)
 
@@ -444,15 +453,23 @@ class PapersCord19(CorpusCord19):
         # Get the String with the Date of Publication.
         paper_info = self.papers_index[cord_uid]
         date_string = paper_info['publish_time']
+
+        # Check we don't have an empty string.
+        if not date_string:
+            return {}
+
+        # Separate Data Fields.
         date_split = date_string.split('-')
 
         # Create Dictionary with the Date Info.
-        date_dict = {'year': int(date_split[0])}
-        if len(date_split) > 1:
-            date_dict['month'] = int(date_split[1])
-        if len(date_split) > 2:
-            date_dict['day'] = int(date_split[2])
-
+        try:
+            date_dict = {'year': int(date_split[0])}
+            if len(date_split) > 1:
+                date_dict['month'] = int(date_split[1])
+            if len(date_split) > 2:
+                date_dict['day'] = int(date_split[2])
+        except ValueError:
+            raise Exception(f"There is a Problem with the date of <{cord_uid}>.")
         # Dictionary with the publication date.
         return date_dict
 
@@ -600,7 +617,7 @@ if __name__ == '__main__':
 
     # Get the 'cord_uid' of one of the papers.
     cord19_ids = the_papers.papers_cord_uids()
-    rand_cord_uid = 'ad6f5742'  # choice(cord19_ids)
+    rand_cord_uid = choice(cord19_ids)
 
     # # Getting the embedding of one of the papers.
     # print(f"\nGetting the Embedding for the Paper <{rand_cord_uid}>...")
@@ -627,16 +644,24 @@ if __name__ == '__main__':
     print(f"  Publish Time: {the_time}")
     print(f"  Authors: {the_authors}")
 
-    # # Test Formatted Paper's Author & Publish Date.
-    # print("\nFormatted Author Info: ")
-    # pprint(the_papers.paper_authors(rand_cord_uid))
-    # print("\nFormatted Publication Date:")
-    # pprint(the_papers.paper_publish_date(rand_cord_uid))
+    # Test Formatted Paper's Author & Publish Date.
+    print("\nFormatted Author Info: ")
+    pprint(the_papers.paper_authors(rand_cord_uid))
+    print("\nFormatted Publication Date:")
+    pprint(the_papers.paper_publish_date(rand_cord_uid))
 
     # # Quit Loop (If Using a Loop to Test)..
     # user_input = input("\nType [q/quit] to Exit Loop.\n")
     # if user_input.lower().strip() in {'q', 'quit', 'exit'}:
     #     break
+
+    # ---- Testing All Dates & Authors Available ----
+    # # Check the format of the Dates & Authors of the Papers.
+    # all_dates = [the_papers.paper_publish_date(the_doc_id) for the_doc_id in the_papers.papers_index]
+    # print(f"\n {len(all_dates)} dates were processed. All Good.")
+    # # Check the format of the Authors of the papers
+    # all_authors = [the_papers.paper_authors(the_doc_id) for the_doc_id in the_papers.papers_index]
+    # print(f"\n {len(all_authors)} authors were processed. All Good.")
 
     print("\nDone.")
     print(f"[{stopwatch.formatted_runtime()}]")
