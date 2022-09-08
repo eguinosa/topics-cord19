@@ -1,0 +1,36 @@
+
+
+Loading the Cord-19 Papers dataset...
+[22:59:01.571] Loading index of the papers' texts...
+[========================================] 100%
+[22:59:01.622] Loading index of papers' embeddings...
+[========================================] 100%
+Done.
+[0 h : 0 min : 1 sec : 365 mill]
+
+Creating Corpora Manager with 138967 documents...
+[22:59:01.627] Corpus <full_dataset> not saved.
+[22:59:01.630] Saving Corpus <full_dataset>...
+[========================================] 100%
+[23:07:02.936] <------------------>
+[23:07:02.941] 108,477 documents out of 138,967 saved.
+[23:07:02.941] 38 docs without title.
+[23:07:02.941] 30,484 docs without abstract.
+[23:07:02.941] 53,415 docs with body text.
+[23:07:02.941] <------------------>
+[23:07:03.756] Corpus Index Loaded.
+Done.
+[0 h : 8 min : 3 sec : 501 mill]
+
+Corpora Manager<full_dataset> has not samples to be loaded.
+
+IDs of Available Corpora:
+  -> 1000_docs
+  -> 3000_docs
+  -> 500_docs
+  -> full_dataset
+  -> 5000_docs
+
+Done.
+[0 h : 8 min : 3 sec : 509 mill]
+
