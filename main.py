@@ -1,4 +1,5 @@
 # Gelin Eguinosa Rosique
+# 2022
 
 from topic_model import TopicModel
 from simple_topic_model import SimpleTopicModel
