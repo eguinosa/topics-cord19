@@ -93,4 +93,3 @@ def number_to_3digits(number):
         return "0" + str(mod_number)
     else:
         return str(mod_number)
-
