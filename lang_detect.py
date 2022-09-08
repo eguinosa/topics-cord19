@@ -50,19 +50,60 @@ class LangDetect:
         model = fasttext.load_model(model_path)
         self.model = model
 
-    def detect_lang(self, text: str, langs=1):
+    def text_language(self, text: str):
         """
-        Detect the language spoken on the 'text'.
+        Detect the most likely language in 'text'.
+
+        Args:
+            text: String with the text we want to investigate.
+
+        Returns:
+            String with the most likely language of the text.
+        """
+        # Check the 'text' is not empty.
+        if not text:
+            raise ValueError("The text is empty.")
+
+        # Get the Language (in a Tuple).
+        languages, _ = self.model.predict(text)
+        # Extract Language from the tuple.
+        language = languages[0]
+        # Delete the label at the beginning of the string.
+        iso_lang = language[9:]
+        # Get Full Name from the ISO if possible.
+        full_lang = self.iso_dict.get(iso_lang, iso_lang)
+
+        # Full Name of the Language.
+        return full_lang
+
+    def detect_languages(self, text: str, k=1):
+        """
+        Detect the languages spoken on the 'text' and the probability of these
+        language.
 
         Args:
             text: String with the text we want to translate.
-            langs: String with the languages you want to predict for the text.
+            k: Int with the languages you want to predict for the text.
 
         Returns:
-            String with the most likely language spoken in the text.
+            Tuple(string, float) with the languages and their probabilities.
         """
-        prediction = self.model.predict(text, k=langs)
-        return prediction
+        # Check the 'text' is not empty.
+        if not text:
+            raise ValueError("The text is empty.")
+
+        # Predict the languages.
+        langs, percents = self.model.predict(text, k=k)
+
+        # Organize the result information.
+        text_languages = []
+        for lang, percent in zip(langs, percents):
+            lang_iso = lang[9:]
+            lang_name = self.iso_dict.get(lang_iso, lang_iso)
+            text_languages.append((lang_name, percent))
+
+        # Text Languages and their Probabilities
+        return text_languages
 
 
 if __name__ == '__main__':
@@ -77,7 +118,8 @@ if __name__ == '__main__':
         the_input = input("\nType a text to predict Language (q/quit to exit).\n-> ")
         if the_input.lower().strip() in {'', 'q', 'quit', 'exit'}:
             break
-        the_prediction = the_detector.detect_lang(the_input, langs=2)
+        # the_prediction = the_detector.detect_languages(the_input, k=1)
+        the_prediction = the_detector.text_language(the_input)
         print("\nThe language of the text is:")
         print(the_prediction)
 
