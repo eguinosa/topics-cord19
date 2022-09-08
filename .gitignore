@@ -7,6 +7,8 @@ cord19_data/
 corpora_data/
 # Document Models
 doc_models/
+# Fasttext Models
+fasttext_models/
 # Project Data
 project_data/
 
