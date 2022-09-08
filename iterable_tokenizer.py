@@ -1,4 +1,5 @@
 # Gelin Eguinosa Rosique
+# 2022
 
 from gensim.models import doc2vec
 
