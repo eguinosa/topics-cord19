@@ -477,32 +477,39 @@ if __name__ == '__main__':
     stopwatch = TimeKeeper()
 
     # Load Random Sample with ID.
-    the_id = '500_docs'
-    print(f"\nLoading Saved Random Sample <{the_id}>...")
-    the_sample = RandomSample.load(sample_id=the_id, show_progress=True)
+    # ----------------------------------------------------------
+    the_id = 'full_dataset'
+    print("\nLoading the Cord-19 Papers dataset...")
+    the_sample = PapersCord19(show_progress=True)
+    # ----------------------------------------------------------
+    # the_id = '500_docs'
+    # print(f"\nLoading Saved Random Sample <{the_id}>...")
+    # the_sample = RandomSample.load(sample_id=the_id, show_progress=True)
+    # ----------------------------------------------------------
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
     # Create a Corpora Manager with this Random Sample and the same ID.
+    the_new_id = the_id
     the_size = len(the_sample)
     print(f"\nCreating Corpora Manager with {the_size} documents...")
-    the_manager = CorporaManager(corpus_id=the_id, corpus=the_sample, show_progress=True)
+    the_manager = CorporaManager(corpus_id=the_new_id, corpus=the_sample, show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
-    # Print Info of the First Document.
-    the_doc_id = the_manager.doc_ids[0]
-    the_doc_info = the_manager.corpus_index[the_doc_id]
-    print(f"\nInformation of the Document <{the_doc_id}>:")
-    pprint(the_doc_info)
+    # # Print Info of the First Document.
+    # the_doc_id = the_manager.doc_ids[0]
+    # the_doc_info = the_manager.corpus_index[the_doc_id]
+    # print(f"\nInformation of the Document <{the_doc_id}>:")
+    # pprint(the_doc_info)
 
     # Check the available Samples.
     the_corpus_id = the_manager.corpus_id
     the_sample_list = CorporaManager.available_samples(corpus_id=the_corpus_id)
     if the_sample_list:
-        print("\nIDs of Available Samples:")
+        print(f"\nIDs of Available Samples for Corpora Manager<{the_corpus_id}>:")
     else:
-        print("\nThe Corpora Manager has not samples to be loaded.")
+        print(f"\nCorpora Manager<{the_corpus_id}> has not samples to be loaded.")
     for the_sample_id in the_sample_list:
         print(f"  -> {the_sample_id}")
 
