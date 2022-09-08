@@ -17,7 +17,6 @@ from papers_cord19 import PapersCord19
 from document_model import DocumentModel
 from random_sample import RandomSample
 from bert_cord19 import BertCord19
-from specter_manager import SpecterManager
 from doc2vec_cord19 import Doc2VecCord19
 from doc_tokenizers import doc_tokenizer
 from extra_funcs import progress_bar, progress_msg, big_number
@@ -1505,25 +1504,25 @@ def save_cord19_topics():
     print("Done.")
     print(f"[{time_record.formatted_runtime()}]")
 
-    # Create Topic Model using Specter.
-    print("\nLoading SPECTER Model...")
-    doc_model = SpecterManager(load_full_dicts=True, show_progress=True)
-    print("Done.")
-    print(f"[{time_record.formatted_runtime()}]")
-    # Create Topic Model.
-    topic_model_id = 'cord19_dataset_specter'
-    print("\nCreating Topic Model using SPECTER...")
-    topic_model = TopicModel(corpus=topic_corpus, doc_model=doc_model,
-                             only_title_abstract=True, show_progress=True)
-    print("Done.")
-    print(f"[{time_record.formatted_runtime()}]")
-    # Report Topics found.
-    print(f"\n{topic_model.num_topics} topics found.")
-    # Save Topic Model.
-    print(f"\nSaving Topic Model with ID: {topic_model_id}")
-    topic_model.save(topic_model_id, show_progress=True)
-    print("Done.")
-    print(f"[{time_record.formatted_runtime()}]")
+    # # Create Topic Model using Specter.
+    # print("\nLoading SPECTER Model...")
+    # doc_model = SpecterManager(load_full_dicts=True, show_progress=True)
+    # print("Done.")
+    # print(f"[{time_record.formatted_runtime()}]")
+    # # Create Topic Model.
+    # topic_model_id = 'cord19_dataset_specter'
+    # print("\nCreating Topic Model using SPECTER...")
+    # topic_model = TopicModel(corpus=topic_corpus, doc_model=doc_model,
+    #                          only_title_abstract=True, show_progress=True)
+    # print("Done.")
+    # print(f"[{time_record.formatted_runtime()}]")
+    # # Report Topics found.
+    # print(f"\n{topic_model.num_topics} topics found.")
+    # # Save Topic Model.
+    # print(f"\nSaving Topic Model with ID: {topic_model_id}")
+    # topic_model.save(topic_model_id, show_progress=True)
+    # print("Done.")
+    # print(f"[{time_record.formatted_runtime()}]")
 
     print("\nDone.")
     print(f"[{time_record.formatted_runtime()}]")
