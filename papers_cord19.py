@@ -357,10 +357,8 @@ class PapersCord19(CorpusCord19):
             new_body_text = paper_json_body_text(doc_json_path)
             body_texts.append(new_body_text)
 
-        # Sort the body texts found by size.
-        body_texts.sort(key=lambda x: len(x), reverse=True)
-        # The longest body text found for the paper.
-        final_text = body_texts[0]
+        # Get the longest body text found for the paper.
+        final_text = select_body_text(body_texts)
         final_text = final_text.strip()
         return final_text
 
@@ -513,7 +511,7 @@ class PapersCord19(CorpusCord19):
             yield self.paper_embedding(cord_uid)
 
 
-def paper_json_body_text(json_file_path):
+def paper_json_body_text(json_file_path: str):
     """
     Extract the body text of a paper from its CORD-19 json file.
 
@@ -548,6 +546,41 @@ def paper_json_body_text(json_file_path):
     paper_body_text = paper_body_text.strip()
     # The Body Text found on the JSON Paper.
     return paper_body_text
+
+
+def select_body_text(body_text_list: list):
+    """
+    Given a list of the body texts of a Paper, select the best body text to
+    represent the Paper.
+
+    - Current Strategy: Select the text with the biggest size.
+
+    Args:
+        body_text_list: A list of the text extracted from the Body Text files
+            of the paper.
+
+    Returns:
+        The best Text representation of the Body Texts.
+    """
+    # Check we have at least one body text.
+    if not body_text_list:
+        # No Text Found.
+        return ''
+
+    # Get the text with the biggest size.
+    max_text = body_text_list[0]
+    max_size = len(max_text)
+    other_texts = body_text_list[1:]
+    for new_text in other_texts:
+        # Continue if this text is smaller.
+        if len(new_text) <= max_size:
+            continue
+        # We have a new bigger text.
+        max_text = new_text
+        max_size = len(new_text)
+
+    # The Biggest text in the list.
+    return max_text
 
 
 if __name__ == '__main__':
