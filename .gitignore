@@ -11,6 +11,8 @@ doc_models/
 fasttext_models/
 # Project Data
 project_data/
+# Temporary Data
+temp_data/
 
 # MacOS File System
 .DS_Store
