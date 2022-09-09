@@ -2,7 +2,6 @@
 # 2022
 
 import json
-import random
 from os import mkdir, listdir
 from shutil import rmtree
 from os.path import join, isdir, isfile
@@ -23,8 +22,9 @@ class CorporaManager:
     Class to manage the documents, document's embeddings and vocabulary's
     embeddings belonging to a Corpus.
     """
-    # Class Data Locations.
+    # Class Data Names & Locations.
     corpora_data_folder = 'corpora_data'
+    default_corpus_id = 'default_corpus'
     default_cord19_dataset = '2020-05-31'
     corpus_folder_prefix = 'corpus_cord19_'
     title_abstracts_folder = 'title_abstracts'
@@ -32,37 +32,28 @@ class CorporaManager:
     single_embeds_folder = 'single_specter_embeddings'
     specter_embeds_file = 'specter_embeddings.json'
     corpus_index_file = 'corpus_index.json'
-    default_sample_id = 'default'
-    sample_prefix = 'random_sample_'
 
-    def __init__(self, corpus_id='', corpus: CorpusCord19 = None, sample_id='',
-                 new_sample_size=-1, show_progress=False):
+    def __init__(self, corpus_id='', corpus: CorpusCord19 = None, show_progress=False):
         """
-        Create a random subset of the documents inside the provided 'corpus' and
-        the requested 'size'. If '_load_corpus' is True, then load the previously
-        saved corpus with the given '_corpus_id'.
+        Extract from a Corpus of the Cord19 Dataset the viable documents for
+        Topic Modeling, saving all their metadata of interest.
 
-        - Checks if we have a corpus saved. If not, saves the given 'corpus'
-          or the default '2020-05-31'.
-        - If a 'sample_id' is provided, loads this saved random sample. Otherwise,
-          creates a new random sample with the value of the 'new_sample_size'.
-        - If the 'new_sample_size' is -1, loads all the documents inside the
-          corpus.
+        It only saves the documents with non-empty title & abstract and
+        eliminates the documents with content not in English.
+
+        If 'corpus_id' is not already saved, it uses 'corpus' to create a new
+        filtered corpus. If 'corpus' is empty, then loads 'default_cord19_dataset'.
 
         Args:
             corpus_id: String with the ID of the corpus we are going to load.
             corpus: CorpusCord19 class containing all the papers we can use to
                 create our random subset.
-            sample_id: String with the ID of the Random Sample we want to
-                load.
-            new_sample_size: Int with the number of documents we want in our
-                random subset.
             show_progress: Bool representing whether we show the progress of
                 the function or not.
         """
         # Check if we have corpus ID.
         if not corpus_id:
-            corpus_id = self.default_cord19_dataset
+            corpus_id = self.default_corpus_id
         # Create Paths to class attributes.
         corpus_folder_name = self.corpus_folder_prefix + corpus_id
         corpus_folder_path = join(self.corpora_data_folder, corpus_folder_name)
@@ -83,7 +74,8 @@ class CorporaManager:
             if not corpus:
                 if show_progress:
                     progress_msg(f"Loading Papers from Corpus <{corpus_id}...")
-                corpus = PapersCord19(dataset_id=corpus_id, show_progress=show_progress)
+                dataset_id = self.default_cord19_dataset
+                corpus = PapersCord19(dataset_id=dataset_id, show_progress=show_progress)
             # Create Corpora folder if it doesn't exist.
             if not isdir(self.corpora_data_folder):
                 mkdir(self.corpora_data_folder)
@@ -93,43 +85,26 @@ class CorporaManager:
             corpus_index = self.save_corpus_data(folder_path=corpus_folder_path,
                                                  corpus=corpus,
                                                  show_progress=show_progress)
+        # Save in a list the IDs of all available Documents in the Corpus.
+        corpus_doc_ids = list(corpus_index)
         # Done Loading the Index of the Corpus.
         if show_progress:
             progress_msg("Corpus Index Loaded.")
 
-        # Get the IDs of the Papers we are going to use. (Random Sample)
-        if sample_id:
-            # Check if this Random Sample is saved.
-            sample_file_name = self.sample_prefix + sample_id + '.json'
-            sample_file_path = join(corpus_folder_path, sample_file_name)
-            if not isfile(sample_file_path):
-                raise Exception(f"There is not Random Sample saved with the name <{sample_id}>")
-            # Load IDs of the Random Sample.
-            with open(sample_file_path, 'r') as f:
-                current_doc_ids = json.load(f)
-        elif new_sample_size != -1 & new_sample_size < len(corpus_index):
-            # Create a new Random Sample.
-            all_doc_ids = list(corpus_index)
-            current_doc_ids = random.sample(all_doc_ids, new_sample_size)
-        else:
-            # Using all the Documents in the Corpus.
-            current_doc_ids = list(corpus_index)
-
-        # Save class attributes.
+        # Save corpus attributes.
         self.corpus_id = corpus_id
-        self.doc_ids = current_doc_ids
         self.corpus_index = corpus_index
+        self.corpus_doc_ids = corpus_doc_ids
         # In case we need to load All Specter Embeddings.
         self.doc_embeds = None
 
     def __len__(self):
         """
-        Length of the current corpus, depending on the size of the Random
-        Sample requested.
+        The amount of documents inside the currently loaded corpus.
 
-        Returns: Int with the number of Documents in the Random Sample.
+        Returns: Int with the number of Documents in the current Corpus.
         """
-        result = len(self.doc_ids)
+        result = len(self.corpus_doc_ids)
         return result
 
     def doc_content(self, doc_id: str, full_content=False):
@@ -369,7 +344,7 @@ class CorporaManager:
         """
         # Check we have a 'corpus_id'.
         if not corpus_id:
-            corpus_id = cls.default_cord19_dataset
+            corpus_id = cls.default_corpus_id
 
         # Check the class folder exists.
         if not isdir(cls.corpora_data_folder):
@@ -416,80 +391,6 @@ class CorporaManager:
         corpora_ids.sort()
         return corpora_ids
 
-    @classmethod
-    def sample_saved(cls, corpus_id='', sample_id=''):
-        """
-        Check if a given Random Sample ID was already saved.
-
-        Args:
-            corpus_id: String with the ID of the corpus.
-            sample_id: String with the ID of the Sample we want to check.
-
-        Returns:
-            Bool indicating if the Random sample is available or not.
-        """
-        # Check if we have a Corpus ID.
-        if not corpus_id:
-            corpus_id = cls.default_cord19_dataset
-        # Check the Sample ID.
-        if not sample_id:
-            sample_id = cls.default_sample_id
-
-        # Check the corpora.
-        if not isdir(cls.corpora_data_folder):
-            return False
-        # Check corpus folder.
-        corpus_folder_name = cls.corpus_folder_prefix + corpus_id
-        corpus_folder_path = join(cls.corpora_data_folder, corpus_folder_name)
-        if not isdir(corpus_folder_path):
-            return False
-        # Check the Random Sample file.
-        sample_file_name = cls.sample_prefix + sample_id + '.json'
-        sample_file_path = join(corpus_folder_path, sample_file_name)
-        if not isfile(sample_file_path):
-            return False
-
-        # All Good.
-        return True
-
-    @classmethod
-    def available_samples(cls, corpus_id=''):
-        """
-        Check the saved Random Samples for the given 'corpus_id'.
-
-        Args:
-            corpus_id: String with the ID of the corpus.
-
-        Returns:
-            List[str] with Random Sample's IDs that are available.
-        """
-        # Check we have a Corpus ID.
-        if not corpus_id:
-            corpus_id = cls.default_cord19_dataset
-        # Check we have a saved Corpus ID.
-        if not cls.corpus_saved(corpus_id=corpus_id):
-            return []
-
-        # Create path to the folder of the corpus ID.
-        corpus_folder_name = cls.corpus_folder_prefix + corpus_id
-        corpus_folder_path = join(cls.corpora_data_folder, corpus_folder_name)
-        # Search for the saved Random Samples.
-        saved_samples = []
-        for filename in listdir(corpus_folder_path):
-            if not isfile(filename):
-                continue
-            if not filename.startswith(cls.sample_prefix):
-                continue
-            if not filename.endswith('.json'):
-                continue
-            # We have new sample.
-            sample_id = filename.replace('.json', '')
-            saved_samples.append(sample_id)
-
-        # The Samples found.
-        saved_samples.sort()
-        return saved_samples
-
 
 if __name__ == '__main__':
     # Record Runtime of the Program.
@@ -521,16 +422,6 @@ if __name__ == '__main__':
     # the_doc_info = the_manager.corpus_index[the_doc_id]
     # print(f"\nInformation of the Document <{the_doc_id}>:")
     # pprint(the_doc_info)
-
-    # Check the available Samples.
-    the_corpus_id = the_manager.corpus_id
-    the_sample_list = CorporaManager.available_samples(corpus_id=the_corpus_id)
-    if the_sample_list:
-        print(f"\nIDs of Available Samples for Corpora Manager<{the_corpus_id}>:")
-    else:
-        print(f"\nCorpora Manager<{the_corpus_id}> has not samples to be loaded.")
-    for the_sample_id in the_sample_list:
-        print(f"  -> {the_sample_id}")
 
     # Check the available Corpora.
     the_corpora_list = CorporaManager.available_corpora()
