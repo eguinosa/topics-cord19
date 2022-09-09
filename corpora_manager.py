@@ -9,10 +9,11 @@ from os.path import join, isdir, isfile
 
 from corpus_cord19 import CorpusCord19
 from papers_cord19 import PapersCord19
+from lang_detect import LangDetect
 from extra_funcs import progress_bar, progress_msg, big_number
 
 # Testing Imports.
-from pprint import pprint
+# from pprint import pprint
 from random_sample import RandomSample
 from time_keeper import TimeKeeper
 
@@ -236,6 +237,9 @@ class CorporaManager:
         without_title = 0
         without_abstract = 0
         with_text = 0
+        not_english_doc = 0
+        # Create Language Checker to save only Docs in English.
+        lang_detector = LangDetect()
         # Create Dictionary Index of the documents.
         docs_index = {}
         doc_embeddings = {}
@@ -255,16 +259,27 @@ class CorporaManager:
                     progress_bar(count, total)
                 # Skip when we don't have Title or Abstract. They are important.
                 continue
+
+            # Get Body Text.
+            doc_body_text = corpus.paper_body_text(doc_id)
+            # Check the document is in English.
+            in_english = lang_detector.doc_in_english(title=doc_title, abstract=doc_abstract,
+                                                      body_text=doc_body_text)
+            # Skip Documents that are not in English.
+            if not in_english:
+                not_english_doc += 1
+                if show_progress:
+                    count += 1
+                    progress_bar(count, total)
+                continue
+
             # Save Title & Abstract.
             doc_title_abstract = doc_title + '\n\n' + doc_abstract
             title_abstract_filename = doc_id + '.txt'
             title_abstract_file_path = join(title_abstract_folder_path, title_abstract_filename)
             with open(title_abstract_file_path, 'w') as f:
                 print(doc_title_abstract, file=f)
-
-            # Get & Save Body Text.
-            doc_body_text = corpus.paper_body_text(doc_id)
-            # Check the Doc has Body Text.
+            # Save Body Text. Check we have a Body Text before Saving.
             if doc_body_text:
                 with_text += 1
                 body_text_filename = doc_id + '.txt'
@@ -333,6 +348,7 @@ class CorporaManager:
             progress_msg(f"{docs_saved} documents out of {total_docs} saved.")
             progress_msg(f"{big_number(without_title)} docs without title.")
             progress_msg(f"{big_number(without_abstract)} docs without abstract.")
+            progress_msg(f"{big_number(not_english_doc)} docs not in english.")
             progress_msg(f"{big_number(with_text)} docs with body text.")
             progress_msg("<------------------>")
 
@@ -397,6 +413,7 @@ class CorporaManager:
                 corpora_ids.append(corpus_id)
 
         # List of Saved Corpora.
+        corpora_ids.sort()
         return corpora_ids
 
     @classmethod
@@ -470,6 +487,7 @@ class CorporaManager:
             saved_samples.append(sample_id)
 
         # The Samples found.
+        saved_samples.sort()
         return saved_samples
 
 
@@ -479,13 +497,13 @@ if __name__ == '__main__':
 
     # Load Random Sample with ID.
     # ----------------------------------------------------------
-    the_id = 'full_dataset'
-    print("\nLoading the Cord-19 Papers dataset...")
-    the_sample = PapersCord19(show_progress=True)
+    # the_id = 'full_dataset'
+    # print("\nLoading the Cord-19 Papers dataset...")
+    # the_sample = PapersCord19(show_progress=True)
     # ----------------------------------------------------------
-    # the_id = '500_docs'
-    # print(f"\nLoading Saved Random Sample <{the_id}>...")
-    # the_sample = RandomSample.load(sample_id=the_id, show_progress=True)
+    the_id = '1000_docs'
+    print(f"\nLoading Saved Random Sample <{the_id}>...")
+    the_sample = RandomSample.load(sample_id=the_id, show_progress=True)
     # ----------------------------------------------------------
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
