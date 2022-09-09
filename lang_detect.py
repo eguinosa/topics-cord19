@@ -10,9 +10,9 @@ from extra_funcs import progress_bar
 
 # Test Imports.
 # from pprint import pprint
-# from random_sample import RandomSample
+from random_sample import RandomSample
 # from papers_cord19 import PapersCord19
-# from extra_funcs import big_number
+from extra_funcs import big_number
 from time_keeper import TimeKeeper
 
 
@@ -113,6 +113,43 @@ class LangDetect:
         # Text Languages and their Probabilities
         return text_languages
 
+    def doc_in_english(self, title, abstract, body_text):
+        """
+        Check if a Paper is in English. To qualify as an English Paper, it needs
+        to have not empty title & abstract (body can be empty), and all the
+        non-empty texts need to be in English.
+
+        Args:
+            title: String with the text of the title.
+            abstract: String with the text of the abstract.
+            body_text: String with the body text of the Paper.
+
+        Returns:
+            Bool indicating if the paper is in English or not.
+        """
+        # Check we have at least title & abstract.
+        if not title or not abstract:
+            return False
+
+        # Check Title.
+        title_lang = self.text_language(title)
+        if title_lang != self.iso_dict['en']:
+            return False
+        # Check Abstract.
+        abstract_lang = self.text_language(abstract)
+        if abstract_lang != self.iso_dict['en']:
+            return False
+        # Check Body Text.
+        if body_text:
+            body_parags = body_text.split('\n')
+            first_parag = body_parags[0]
+            body_lang = self.text_language(first_parag)
+            if body_lang != self.iso_dict['en']:
+                return False
+
+        # All Good. Everything is in English.
+        return True
+
     def language_count(self, corpus: CorpusCord19, show_progress=False):
         """
         Count the Languages that appear on 'corpus'. Creates a dictionary with
@@ -178,21 +215,21 @@ if __name__ == '__main__':
     the_detector = LangDetect()
 
     # Predict the Language of Texts.
-    while True:
-        the_input = input("\nType a text to predict Language (q/quit to exit).\n-> ")
-        if the_input.lower().strip() in {'', 'q', 'quit', 'exit'}:
-            break
-        # the_prediction = the_detector.detect_languages(the_input, k=1)
-        the_prediction = the_detector.text_language(the_input)
-        print("\nThe language of the text is:")
-        print(the_prediction)
+    # while True:
+    #     the_input = input("\nType a text to predict Language (q/quit to exit).\n-> ")
+    #     if the_input.lower().strip() in {'', 'q', 'quit', 'exit'}:
+    #         break
+    #     # the_prediction = the_detector.detect_languages(the_input, k=1)
+    #     the_prediction = the_detector.text_language(the_input)
+    #     print("\nThe language of the text is:")
+    #     print(the_prediction)
 
     # # ---- Check the Languages of the Texts in the Cord-19 Dataset ----
     # # ---------------------------------------------------------
-    # # # Get the Corpus for the Test.
-    # # sample_id = '5000_docs'
-    # # print(f"\nLoading Saved Random Sample <{sample_id}>...")
-    # # the_papers = RandomSample.load(sample_id=sample_id, show_progress=True)
+    # Get the Corpus for the Test.
+    sample_id = '3000_docs'
+    print(f"\nLoading Saved Random Sample <{sample_id}>...")
+    the_papers = RandomSample.load(sample_id=sample_id, show_progress=True)
     # # ---------------------------------------------------------
     # # Use CORD-19 Dataset
     # print("\nLoading the CORD-19 Dataset...")
@@ -211,6 +248,25 @@ if __name__ == '__main__':
     # print(f"\nPapers in English: {big_number(the_english_count)}")
     # print(f"Papers in other Languages: {big_number(the_total - the_english_count)}")
     # print(f"Percentage of Paper in english: {the_percent}")
+
+    # ---- Test a Method to see if a Paper is in English ----
+    # Create lists for the paper's ID depending on their languages.
+    the_english_docs = []
+    the_other_docs = []
+    for the_doc_id in the_papers.papers_cord_uids():
+        # Check if the paper is in English.
+        the_title = the_papers.paper_title(the_doc_id)
+        the_abstract = the_papers.paper_abstract(the_doc_id)
+        the_body = the_papers.paper_body_text(the_doc_id)
+        the_check = the_detector.doc_in_english(the_title, the_abstract, the_body)
+        # Save Paper's ID on a list depending on its language.
+        if the_check:
+            the_english_docs.append(the_doc_id)
+        else:
+            the_other_docs.append(the_doc_id)
+    # Report the amount of documents in English.
+    print(f"\n{big_number(len(the_english_docs))} documents in English.")
+    print(f"{big_number(len(the_other_docs))} documents in other Languages.")
 
     print("\nDone.")
     print(f"[{stopwatch.formatted_runtime()}]\n")
