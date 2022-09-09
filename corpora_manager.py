@@ -24,7 +24,7 @@ class CorporaManager:
     """
     # Class Data Names & Locations.
     corpora_data_folder = 'corpora_data'
-    default_corpus_id = 'default_corpus'
+    default_corpus_id = 'default'
     default_cord19_dataset = '2020-05-31'
     corpus_folder_prefix = 'corpus_cord19_'
     title_abstracts_folder = 'title_abstracts'
@@ -402,7 +402,7 @@ if __name__ == '__main__':
     # print("\nLoading the Cord-19 Papers dataset...")
     # the_sample = PapersCord19(show_progress=True)
     # ----------------------------------------------------------
-    the_id = '1000_docs'
+    the_id = '10000_docs'
     print(f"\nLoading Saved Random Sample <{the_id}>...")
     the_sample = RandomSample.load(sample_id=the_id, show_progress=True)
     # ----------------------------------------------------------
@@ -412,7 +412,7 @@ if __name__ == '__main__':
     # Create a Corpora Manager with this Random Sample and the same ID.
     the_new_id = the_id
     the_size = len(the_sample)
-    print(f"\nCreating Corpora Manager with {the_size} documents...")
+    print(f"\nCreating Corpora Manager with {big_number(the_size)} documents...")
     the_manager = CorporaManager(corpus_id=the_new_id, corpus=the_sample, show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
