@@ -58,7 +58,7 @@ class TopicModel:
             - If '_used_saved' is True, loads a previously used and saved model
               depending on the value of '_saved_id'.
             - If no ID is provided in 'saved_id', load the last used model.
-            - If no 'corpus' is provided, use Papers().
+            - If no 'corpus' is provided, use PapersCord19().
             - If no 'doc_model' is provided, use BertCord19().
 
         Args:
@@ -1546,7 +1546,7 @@ if __name__ == '__main__':
     # ---------------------------------------------
     # # Use CORD-19 Dataset
     # print("\nLoading the CORD-19 Dataset...")
-    # sample = Papers(show_progress=True)
+    # sample = PapersCord19(show_progress=True)
     print("Done.")
     print(f"[{stopwatch.formatted_runtime()}]")
 
