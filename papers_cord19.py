@@ -555,7 +555,8 @@ def paper_json_body_text(json_file_path: str):
             # Check if we are still on the same section, or a new one.
             if section_name == last_section:
                 paper_body_text += paragraph_text + '\n\n'
-            else:
+            # Check that the new section name is not empty.
+            elif section_name:
                 paper_body_text += '<< ' + section_name + ' >>\n' + paragraph_text + '\n\n'
             # Save the section name for the next iteration.
             last_section = section_name
